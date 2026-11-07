@@ -17,14 +17,15 @@
   <!-- NuGet package -->
   <PropertyGroup>
     <PackageId>z3l.FastHtmlParser</PackageId>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
     <Authors>z3l</Authors>
     <Copyright>Copyright © 2026 z3l</Copyright>
     <Description>Fast, low-allocation HTML/XML parser for scraping on .NET 9/10. About 10x (up to 36x) faster and 13–23x less memory than AngleSharp and HtmlAgilityPack in benchmarks. Zero-allocation tag/attribute matching, HTML5 entities, clean text extraction. Free for companies under USD 1M revenue and under 100 employees.</Description>
-    <PackageTags>html;parser;html-parser;scraping;crawler;xml;rss;sitemap;html5;entities;span;performance</PackageTags>
+    <PackageTags>html;parser;html-parser;scraping;crawler;xml;rss;sitemap;html5;entities;span;performance;web-scraping;scraper;html-to-text;text-extraction;dom;fast;low-allocation;zero-allocation;dotnet;csharp;net9;net10;aot;htmlagilitypack-alternative;anglesharp-alternative</PackageTags>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageProjectUrl>https://github.com/romanti3172/z3l.FastHtmlParser</PackageProjectUrl>
     <RepositoryUrl>https://github.com/romanti3172/z3l.FastHtmlParser</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -41,6 +42,7 @@
   <ItemGroup>
     <None Include="..\..\LICENSE.md" Pack="true" PackagePath="\" />
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
