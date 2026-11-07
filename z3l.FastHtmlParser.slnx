@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/z3l.FastHtmlParser.Benchmarks/z3l.FastHtmlParser.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/z3l.FastHtmlParser/z3l.FastHtmlParser.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/z3l.FastHtmlParser.Tests/z3l.FastHtmlParser.Tests.csproj" />
+  </Folder>
+</Solution>
