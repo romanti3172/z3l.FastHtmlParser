@@ -1,0 +1,3 @@
+# GitHub language stats: saved test pages and the website are not the library's code.
+tests/z3l.FastHtmlParser.Tests/Fixtures/** linguist-vendored
+docs/** linguist-documentation
