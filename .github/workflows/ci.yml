@@ -6,6 +6,10 @@ on:
     tags: ['v*']
   pull_request:
 
+permissions:
+  contents: read
+  id-token: write   # nuget.org Trusted Publishing (OIDC), no stored API key
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -38,6 +42,14 @@ jobs:
           name: nupkg
           path: artifacts/*
 
+      # Trusted Publishing: exchanges the GitHub OIDC token for a short-lived nuget.org key.
+      - name: NuGet login
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: nuget_login
+        uses: NuGet/login@v1
+        with:
+          user: romanti3172
+
       - name: Publish to nuget.org
         if: startsWith(github.ref, 'refs/tags/v')
-        run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ steps.nuget_login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
