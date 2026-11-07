@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>z3l.FastHtmlParser: fast HTML parser for .NET</title>
+  <meta name="description" content="Fast, low-allocation HTML/XML parser for web scraping on .NET 9 and 10. 10–36x faster and 13–23x less memory than AngleSharp and HtmlAgilityPack.">
+  <meta property="og:title" content="z3l.FastHtmlParser: fast HTML parser for .NET">
+  <meta property="og:description" content="Parse and scrape HTML 10–36x faster than AngleSharp and HtmlAgilityPack, with 13–23x less memory.">
+  <meta property="og:image" content="icon.png">
+  <link rel="icon" href="icon.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="./"><img src="icon.png" alt=""><span>FastHtmlParser</span></a>
+    <nav class="nav">
+      <a class="hide-sm" href="#benchmarks">Benchmarks</a>
+      <a class="hide-sm" href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a class="hide-sm" href="https://github.com/romanti3172/z3l.FastHtmlParser#readme">Docs</a>
+      <a class="btn btn-ghost btn-sm" href="https://www.nuget.org/packages/z3l.FastHtmlParser">NuGet</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <div class="eyebrow">.NET 9 &amp; .NET 10 · HTML · XML · RSS · Sitemaps</div>
+    <h1>Scrape HTML <span class="hl">10–36x faster</span> in&nbsp;.NET</h1>
+    <p class="lead">z3l.FastHtmlParser is a low-allocation HTML/XML parser built for scraping and data extraction.
+      Same results as AngleSharp and HtmlAgilityPack, with a fraction of the CPU time and memory.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://github.com/romanti3172/z3l.FastHtmlParser#quick-start">Get started</a>
+      <a class="btn btn-ghost" href="#pricing">Pricing</a>
+    </div>
+    <div class="install">
+      <code><span class="prompt">&gt; </span>dotnet add package z3l.FastHtmlParser</code>
+      <button class="copy" type="button" data-copy="dotnet add package z3l.FastHtmlParser">Copy</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b>10–36x</b><span>faster parsing</span></div>
+      <div class="stat"><b>13–23x</b><span>less memory</span></div>
+      <div class="stat"><b>0</b><span>allocations to match tags</span></div>
+      <div class="stat"><b>55 μs</b><span>to parse a 50 KB page</span></div>
+    </div>
+  </div>
+
+  <section class="soft" id="code">
+    <div class="wrap code-grid">
+      <div>
+        <div class="section-head">
+          <h2>Scraping code that reads like the page</h2>
+          <p>No CSS selector strings to parse, no XPath. Typed tags and attributes, and chains that never throw.</p>
+        </div>
+        <ul class="code-points">
+          <li><span class="dot">1</span><div><b>Typed and allocation-free</b><span>About 250 tags and 250 attributes as enums: HTML, SVG, MathML, RSS, Atom, sitemaps.</span></div></li>
+          <li><span class="dot">2</span><div><b>Null-safe chains</b><span>A missing element gives <code>null</code> at the end of the chain, not an exception.</span></div></li>
+          <li><span class="dot">3</span><div><b>Absolute links</b><span><code>AttributeHref()</code> resolves links against the page URL for you.</span></div></li>
+        </ul>
+      </div>
+<pre class="code"><code><span class="k">using</span> z3l.FastHtmlParser;
+
+<span class="k">var</span> doc = <span class="k">new</span> <span class="t">HtmlParser</span>(html, <span class="s">"https://example.com/catalog/"</span>);
+
+<span class="c">// first match</span>
+<span class="k">var</span> title = doc.<span class="m">Find</span>(<span class="t">HtmlTag</span>.H1).<span class="m">Text</span>();
+<span class="k">var</span> price = doc.<span class="m">Find</span>(<span class="t">HtmlTag</span>.Span, cls: <span class="s">"price"</span>).<span class="m">Text</span>();
+
+<span class="c">// chains never throw: a missing tag gives null</span>
+<span class="k">var</span> phone = doc.<span class="m">Find</span>(<span class="t">HtmlTag</span>.Div, id: <span class="s">"contacts"</span>)
+               .<span class="m">Find</span>(<span class="t">HtmlTag</span>.A, cls: <span class="s">"phone"</span>)
+               .<span class="m">AttributeHrefTelephone</span>();
+
+<span class="c">// all matches, links made absolute</span>
+<span class="k">foreach</span> (<span class="k">var</span> a <span class="k">in</span> doc.<span class="m">Find</span>(<span class="t">HtmlTag</span>.Div, cls: <span class="s">"gallery"</span>)
+                     .<span class="m">FindAll</span>(<span class="t">HtmlTag</span>.A))
+{
+    <span class="t">Console</span>.<span class="m">WriteLine</span>(a.<span class="m">AttributeHref</span>());
+}</code></pre>
+    </div>
+  </section>
+
+  <section id="benchmarks">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Benchmarks on real pages</h2>
+        <p>BenchmarkDotNet, .NET 10, Intel Xeon E-2236. Shorter is better. In the scraping tasks all three libraries return exactly the same records.</p>
+      </div>
+      <div class="bench-tabs" role="tablist" id="bench-tabs"></div>
+      <div class="bench-grid">
+        <div class="card">
+          <h3>Time</h3>
+          <p class="sub" id="bench-time-sub"></p>
+          <div id="bench-time"></div>
+        </div>
+        <div class="card">
+          <h3>Memory allocated</h3>
+          <p class="sub" id="bench-mem-sub"></p>
+          <div id="bench-mem"></div>
+        </div>
+      </div>
+      <p class="bench-note">AngleSharp 1.10.0, HtmlAgilityPack 1.13.1. Full tables, method and source:
+        <a href="https://github.com/romanti3172/z3l.FastHtmlParser/tree/main/benchmarks">benchmarks on GitHub</a>.</p>
+    </div>
+  </section>
+
+  <section class="soft" id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Everything scraping needs, nothing it doesn't</h2>
+        <p>Fewer CPU cores per crawler, less GC pressure, lower cloud bills.</p>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div>
+          <h3>Fast parsing</h3>
+          <p>One pass, one exact-size list of tags. A 50 KB page parses in about 55 μs.</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg></div>
+          <h3>Zero-allocation matching</h3>
+          <p><code>Find</code>, <code>FindAll</code> and <code>Is</code> compare spans and enums: searching allocates nothing.</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h13"/></svg></div>
+          <h3>Clean text</h3>
+          <p><code>Text()</code> gives visible text; <code>TextLineBreaks()</code> keeps lines and paragraphs.</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7 3 12l5 5M16 7l5 5-5 5"/></svg></div>
+          <h3>HTML5 entities</h3>
+          <p>All 2125 named references, legacy names without <code>;</code> and numeric references, decoded like a browser.</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg></div>
+          <h3>XML, RSS, Atom, sitemaps</h3>
+          <p>Documents starting with <code>&lt;?xml</code> are parsed by XML rules, so feeds and sitemaps just work.</p>
+        </div>
+        <div class="feature">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg></div>
+          <h3>Thread-safe, AOT-ready</h3>
+          <p>A parsed document is read-only: query it from any number of threads. Trimming and Native AOT compatible.</p>
+        </div>
+      </div>
+      <p class="honest"><b>What it is not.</b> It builds a flat list of tags, not a full DOM: no CSS selectors or XPath,
+        no implicit <code>&lt;tbody&gt;</code>, read-only documents. For extracting data it finds the same elements,
+        texts and attributes as AngleSharp; the test suite checks this on every saved page.</p>
+    </div>
+  </section>
+
+  <section id="pricing">
+    <div class="wrap">
+      <div class="section-head center">
+        <h2>Simple, one-time pricing</h2>
+        <p>Free for individuals and small companies. Larger organizations pay once and use it forever.</p>
+      </div>
+      <div class="pricing">
+        <div class="card plan">
+          <h3>Community</h3>
+          <p class="who">Individuals and organizations under USD 1M annual revenue and under 100 employees.</p>
+          <div class="price">$0 <small>free forever</small></div>
+          <ul>
+            <li>Commercial use included</li>
+            <li>All features, no limits</li>
+            <li>All future versions</li>
+            <li>Community support on GitHub</li>
+          </ul>
+          <a class="btn btn-ghost" href="https://www.nuget.org/packages/z3l.FastHtmlParser">Install from NuGet</a>
+          <p class="fine">No registration, no license key.</p>
+        </div>
+        <div class="card plan featured">
+          <span class="badge">For companies over $1M or 100+ people</span>
+          <h3>Commercial</h3>
+          <p class="who">Organizations with USD 1M or more annual revenue, or 100 or more employees, including affiliates.</p>
+          <div class="price">$1,000 <small>one-time, per organization</small></div>
+          <ul>
+            <li>Perpetual license, all current and future versions</li>
+            <li>Unlimited developers, apps, servers and deployments</li>
+            <li>Invoice and license certificate for your records</li>
+            <li>Priority email support</li>
+          </ul>
+          <!-- Replace with the Lemon Squeezy checkout URL once the store is approved. -->
+          <a class="btn btn-primary" id="buy" href="mailto:romanti3172@gmail.com?subject=z3l.FastHtmlParser%20commercial%20license">Buy commercial license</a>
+          <p class="fine">Secure checkout. 14-day money-back guarantee.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="soft" id="faq">
+    <div class="wrap">
+      <div class="section-head center"><h2>Questions</h2></div>
+      <div class="faq">
+        <details>
+          <summary>Do I need a commercial license?</summary>
+          <p>Only if your organization, together with its affiliates, has USD 1,000,000 or more in annual revenue, or 100 or more employees and contractors. Everyone else uses it free, including in commercial products.</p>
+        </details>
+        <details>
+          <summary>What exactly do I get for $1,000?</summary>
+          <p>A perpetual license for your whole organization: any number of developers, applications, servers and deployments, all current and future versions, an invoice, a license certificate and priority email support.</p>
+        </details>
+        <details>
+          <summary>Can we pay by invoice or bank transfer?</summary>
+          <p>Yes. Card checkout is the fastest; for an invoice, purchase order or vendor onboarding, write to <a href="mailto:romanti3172@gmail.com">romanti3172@gmail.com</a>.</p>
+        </details>
+        <details>
+          <summary>Do our customers need a license too?</summary>
+          <p>No. End users of your applications and services never need their own license.</p>
+        </details>
+        <details>
+          <summary>Does the library phone home or check a license key?</summary>
+          <p>No. There is no license key, no telemetry and no network access. Licensing is a legal agreement, not a technical lock.</p>
+        </details>
+        <details>
+          <summary>What if we grow past the threshold later?</summary>
+          <p>Keep using it and buy the commercial license within 30 days of crossing the threshold.</p>
+        </details>
+        <details>
+          <summary>Can I get a refund?</summary>
+          <p>Yes, within 14 days of purchase, no questions asked. See the <a href="refund.html">refund policy</a>.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="wrap">
+      <h2>Try it on your own pages</h2>
+      <p>Install the package, run your scraper and compare the numbers. It is free to evaluate for everyone.</p>
+      <div class="install">
+        <code><span class="prompt">&gt; </span>dotnet add package z3l.FastHtmlParser</code>
+        <button class="copy" type="button" data-copy="dotnet add package z3l.FastHtmlParser">Copy</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>© 2026 z3l</span>
+    <nav>
+      <a href="eula.html">License (EULA)</a>
+      <a href="refund.html">Refund policy</a>
+      <a href="privacy.html">Privacy policy</a>
+      <a href="contact.html">Contact</a>
+      <a href="https://github.com/romanti3172/z3l.FastHtmlParser">GitHub</a>
+      <a href="https://www.nuget.org/packages/z3l.FastHtmlParser">NuGet</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+  // Benchmark results from benchmarks/README.md (time in μs, memory in KB).
+  const BENCH = [
+    { id: "scrape-books", tab: "Scrape 20 books", desc: "books.toscrape.com, 51 KB: parse and extract title, price, rating",
+      rows: [["z3l.FastHtmlParser", 65.1, 46.6], ["HtmlAgilityPack", 799.1, 1038.2], ["AngleSharp", 1016.4, 707.3]] },
+    { id: "parse-books", tab: "Parse 51 KB page", desc: "books.toscrape.com, 51 KB",
+      rows: [["z3l.FastHtmlParser", 55.0, 39.2], ["HtmlAgilityPack", 618.2, 812.4], ["AngleSharp", 997.2, 663.4]] },
+    { id: "parse-large", tab: "Parse 510 KB page", desc: "books.toscrape.com x10, 510 KB",
+      rows: [["z3l.FastHtmlParser", 546.1, 391.1], ["AngleSharp", 12273.6, 6277.2], ["HtmlAgilityPack", 19651.9, 8062.5]] },
+    { id: "scrape-quotes", tab: "Scrape 10 quotes", desc: "quotes.toscrape.com, 11 KB: parse and extract text, author, tags",
+      rows: [["z3l.FastHtmlParser", 21.1, 17.4], ["HtmlAgilityPack", 248.1, 401.1], ["AngleSharp", 271.6, 228.4]] },
+  ];
+
+  const fmtTime = us => us >= 1000 ? (us / 1000).toFixed(1) + " ms" : us.toFixed(1) + " μs";
+  const fmtMem = kb => kb >= 1000 ? (kb / 1024).toFixed(1) + " MB" : Math.round(kb) + " KB";
+
+  function bars(el, rows, col, fmt) {
+    const max = Math.max(...rows.map(r => r[col]));
+    const base = rows[0][col];
+    el.innerHTML = rows.map((r, i) => {
+      const us = i === 0 ? " us" : "";
+      const ratio = i === 0 ? "" : ` · ${(r[col] / base).toFixed(1)}x`;
+      return `<div class="bar-row"><div class="bar-label${us}">${r[0]}</div>
+        <div class="bar-track"><div class="bar${us}" style="width:0" data-w="${(r[col] / max * 78).toFixed(2)}%"></div>
+        <span class="bar-value${us}">${fmt(r[col])}${ratio}</span></div></div>`;
+    }).join("");
+    requestAnimationFrame(() => el.querySelectorAll(".bar").forEach(b => b.style.width = b.dataset.w));
+  }
+
+  const tabs = document.getElementById("bench-tabs");
+  function show(id) {
+    const b = BENCH.find(x => x.id === id);
+    tabs.querySelectorAll("button").forEach(t => t.setAttribute("aria-selected", t.dataset.id === id));
+    document.getElementById("bench-time-sub").textContent = b.desc;
+    document.getElementById("bench-mem-sub").textContent = b.desc;
+    bars(document.getElementById("bench-time"), b.rows, 1, fmtTime);
+    bars(document.getElementById("bench-mem"), b.rows, 2, fmtMem);
+  }
+  tabs.innerHTML = BENCH.map(b => `<button type="button" role="tab" data-id="${b.id}">${b.tab}</button>`).join("");
+  tabs.addEventListener("click", e => { const t = e.target.closest("button"); if (t) show(t.dataset.id); });
+  show(BENCH[0].id);
+
+  document.querySelectorAll(".copy").forEach(btn => btn.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(btn.dataset.copy); btn.textContent = "Copied"; }
+    catch { btn.textContent = "Select & copy"; }
+    setTimeout(() => btn.textContent = "Copy", 1500);
+  }));
+</script>
+</body>
+</html>

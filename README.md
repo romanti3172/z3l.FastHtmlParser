@@ -2,6 +2,8 @@
 
 Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 9 and .NET 10.
 
+**Website:** https://romanti3172.github.io/z3l.FastHtmlParser/ · **NuGet:** https://www.nuget.org/packages/z3l.FastHtmlParser
+
 - **Fast parsing.** About 10x faster than HtmlAgilityPack and AngleSharp on typical pages,
   up to 36x on large ones, with 13–23x less memory (see the benchmarks); a 50 KB page parses in
   about 55 μs with a single exact-size list of tags.
@@ -166,4 +168,4 @@ with AngleSharp and HtmlAgilityPack; see [benchmarks/README.md](benchmarks/READM
 Free for individuals and organizations with annual revenue **below USD 1,000,000** and
 **fewer than 100** employees, including commercial use. Organizations with annual revenue of
 USD 1,000,000 or more, or with 100 or more employees, need a commercial license: a **one-time payment of USD 1,000** per organization, perpetual, all versions.
-See [LICENSE.md](LICENSE.md) for the full terms.
+See [LICENSE.md](LICENSE.md) for the full terms and [pricing](https://romanti3172.github.io/z3l.FastHtmlParser/#pricing) to buy a commercial license.

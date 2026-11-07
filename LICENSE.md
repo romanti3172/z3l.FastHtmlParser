@@ -38,7 +38,7 @@ more**, the Licensee must purchase a Commercial License.
 - A Licensee that stops being a Small Licensee (its Annual Revenue or Headcount reaches the
   threshold) while already using the Software must purchase the Commercial License within
   30 days.
-- To purchase: contact **romanti3172@gmail.com**.
+- To purchase: https://romanti3172.github.io/z3l.FastHtmlParser/#pricing, or contact **romanti3172@gmail.com** for an invoice.
 
 The Commercial License grants the same rights as section 2, without the revenue and headcount
 limits.
