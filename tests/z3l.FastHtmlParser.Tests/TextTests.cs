@@ -122,6 +122,21 @@ public sealed class TextTests
     }
 
     [TestMethod]
+    public void AttributeHref_PathLikeLinks_AreRelativeOnEveryOs()
+    {
+        // .NET reads "/path" (Linux/macOS) and "//host/path" (every OS) as implicit file paths.
+        var doc = new HtmlParser(
+            "<a href='/author/Albert-Einstein'>a</a><a href='//cdn.example.org/x.js'>b</a><a href='file:///etc/hosts'>c</a><a href='mailto:me@example.com'>d</a>",
+            "https://example.com/dir/page.html");
+        var links = doc.FindAllByName(HtmlTag.A).ToList();
+
+        Assert.AreEqual("https://example.com/author/Albert-Einstein", links[0].AttributeHref());
+        Assert.AreEqual("https://cdn.example.org/x.js", links[1].AttributeHref());
+        Assert.AreEqual("file:///etc/hosts", links[2].AttributeHref());
+        Assert.AreEqual("mailto:me@example.com", links[3].AttributeHref());
+    }
+
+    [TestMethod]
     public void Attributes_AreDecoded_AttributeBodyIsRaw()
     {
         var doc = new HtmlParser("<a title='Shakespeare&#39;s &amp; Co' data-q='?a=1&copy=2' class='x&#32;y'>t</a>");

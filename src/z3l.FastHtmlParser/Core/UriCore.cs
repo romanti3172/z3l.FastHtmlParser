@@ -30,10 +30,14 @@ internal static class UriCore
         {
             string linkString = link.ToString();
 
-            if (!Uri.TryCreate(linkString, UriKind.Absolute, out _) &&
+            if (!IsAbsoluteLink(linkString) &&
                 (currentPageUri ?? (Uri.TryCreate(currentPage, UriKind.Absolute, out var parsed) ? parsed : null)) is { } baseUri)
             {
-                processedLink = Uri.TryCreate(baseUri, linkString, out var combinedUri)
+                // Combining with an explicitly relative Uri: on Linux/macOS the string overload
+                // could still read "/path" as a file path.
+                processedLink = (Uri.TryCreate(linkString, UriKind.Relative, out var relativeUri)
+                                    && Uri.TryCreate(baseUri, relativeUri, out var combinedUri))
+                                || Uri.TryCreate(baseUri, linkString, out combinedUri)
                     ? combinedUri.ToString()
                     : linkString;
             }
@@ -110,5 +114,17 @@ internal static class UriCore
                 ArrayPool<char>.Shared.Return(rentedArray);
             }
         }
+    }
+
+    /// <summary>
+    /// True for a link with its own scheme ("https://…", "mailto:…", "file:…").
+    /// On Linux/macOS <see cref="Uri.TryCreate(string, UriKind, out Uri)"/> also accepts "/path" and
+    /// "//host/path" as implicit file paths; in HTML these are relative to the page, so they are
+    /// not absolute here (the same on every OS).
+    /// </summary>
+    private static bool IsAbsoluteLink(string link)
+    {
+        return Uri.TryCreate(link, UriKind.Absolute, out var uri)
+            && (!uri.IsFile || link.StartsWith("file:", StringComparison.OrdinalIgnoreCase));
     }
 }
