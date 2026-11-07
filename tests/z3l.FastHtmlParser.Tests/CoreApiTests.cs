@@ -55,7 +55,7 @@ public sealed class CoreApiTests
 
         Assert.AreEqual("div", doc.Find(default(TagQuery))!.Name);
         Assert.AreEqual("div", doc.Find(new TagQuery())!.Name);
-        Assert.AreEqual(doc.Count(), doc.FindAll(default).Count());
+        Assert.AreEqual(doc.Count(), doc.FindAll(default(TagQuery)).Count());
         Assert.IsTrue(doc.Find(HtmlTag.Span).Is(default(TagQuery)));
     }
 
@@ -95,6 +95,44 @@ public sealed class CoreApiTests
         Assert.AreEqual("my-widget", first.Next(new TagQuery("my-widget"))!.Name);
         Assert.AreEqual("1", doc.Find(HtmlTag.Li, cls: "last").PreviousSibling(new TagQuery(HtmlTag.Li) { Class = "first" }).AttributeByName("data-id"));
         StringAssert.StartsWith(first.TextAfterUntil(new TagQuery(HtmlTag.Span))!.Trim(), "<li class=\"item\"");
+    }
+
+    [TestMethod]
+    public void Navigation_WithPlainHtmlTag()
+    {
+        var doc = new HtmlParser(Html);
+        var span = doc.Find(HtmlTag.Span)!;
+        var first = doc.Find(HtmlTag.Li, cls: "first")!;
+        var last = doc.Find(HtmlTag.Li, cls: "last")!;
+
+        // HtmlTag converts to TagQuery implicitly
+        Assert.AreSame(span.Parent(new TagQuery(HtmlTag.Div)), span.Parent(HtmlTag.Div));
+        Assert.AreSame(first.NextSibling(new TagQuery(HtmlTag.Li)), first.NextSibling(HtmlTag.Li));
+        Assert.AreSame(last.PreviousSibling(new TagQuery(HtmlTag.Li)), last.PreviousSibling(HtmlTag.Li));
+        Assert.AreSame(first.Next(new TagQuery(HtmlTag.Span)), first.Next(HtmlTag.Span));
+        Assert.AreEqual(first.TextAfterUntil(new TagQuery(HtmlTag.Span)), first.TextAfterUntil(HtmlTag.Span));
+        Assert.IsNotNull(first.NextSibling(HtmlTag.Li));
+    }
+
+    [TestMethod]
+    public void Navigation_WithPlainName()
+    {
+        var doc = new HtmlParser(Html);
+        var span = doc.Find(HtmlTag.Span)!;
+        var first = doc.Find(HtmlTag.Li, cls: "first")!;
+        var last = doc.Find(HtmlTag.Li, cls: "last")!;
+
+        // a string converts to TagQuery implicitly, case-insensitive, custom names included
+        Assert.AreSame(span.Parent(new TagQuery("div")), span.Parent("div"));
+        Assert.AreSame(first.NextSibling(HtmlTag.Li), first.NextSibling("LI"));
+        Assert.AreSame(last.PreviousSibling(HtmlTag.Li), last.PreviousSibling("li"));
+        Assert.AreEqual("my-widget", first.Next("my-widget")!.Name);
+        Assert.AreEqual(first.TextAfterUntil(HtmlTag.Span), first.TextAfterUntil("span"));
+        Assert.IsNull(first.NextSibling("no-such-tag"));
+
+        // string overloads of Find / FindAll keep winning over the conversion
+        Assert.AreSame(doc.Find(HtmlTag.Span), doc.Find("span"));
+        Assert.AreEqual(doc.FindAll(HtmlTag.Li).Count(), doc.FindAll("li").Count());
     }
 
     [TestMethod]

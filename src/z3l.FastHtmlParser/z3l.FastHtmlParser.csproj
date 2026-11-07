@@ -17,7 +17,7 @@
   <!-- NuGet package -->
   <PropertyGroup>
     <PackageId>z3l.FastHtmlParser</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>z3l</Authors>
     <Copyright>Copyright © 2026 z3l</Copyright>
     <Description>Fast, low-allocation HTML/XML parser for scraping on .NET 9/10. About 10x (up to 36x) faster and 13–23x less memory than AngleSharp and HtmlAgilityPack in benchmarks. Zero-allocation tag/attribute matching, HTML5 entities, clean text extraction. Free for companies under USD 1M revenue and under 100 employees.</Description>

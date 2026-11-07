@@ -51,6 +51,18 @@ public readonly struct TagQuery
     }
 
     /// <summary>
+    /// A query by name only, so that a plain <see cref="HtmlTag"/> can be passed wherever a query is expected:
+    /// <c>tag.NextSibling(HtmlTag.Dd)</c>, <c>tag.Parent(HtmlTag.Table)</c>.
+    /// </summary>
+    public static implicit operator TagQuery(HtmlTag tag) => new(tag);
+
+    /// <summary>
+    /// A query by name only (case-insensitive), so that a tag name can be passed wherever a query is expected:
+    /// <c>tag.NextSibling("dd")</c>, <c>tag.Parent("my-widget")</c>.
+    /// </summary>
+    public static implicit operator TagQuery(string? name) => new(name);
+
+    /// <summary>
     /// Tags with the given name (case-insensitive); <see langword="null"/>: any tag.
     /// Use this for names that are not in <see cref="HtmlTag"/> ("my-widget").
     /// </summary>

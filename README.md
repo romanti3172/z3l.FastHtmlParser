@@ -103,19 +103,23 @@ tag.AttributeBody(HtmlAttribute.Content);     // value as written in the source
 
 ```csharp
 tag.Parent();
-tag.Parent(new TagQuery(HtmlTag.Table));              // nearest enclosing <table>
+tag.Parent(HtmlTag.Table);                            // nearest enclosing <table>
+tag.Parent(new TagQuery(HtmlTag.Div) { Class = "card" });
 tag.Children();                                       // direct children
 foreach (var descendant in tag) { }                   // all tags inside
 tag.NextSibling();
-tag.NextSibling(new TagQuery(HtmlTag.Dd));            // <dt>Price</dt><dd>100</dd>
+tag.NextSibling(HtmlTag.Dd);                          // <dt>Price</dt><dd>100</dd>
 tag.PreviousSibling();
-tag.Next(new TagQuery(HtmlTag.Div));                  // first <div> after this tag
+tag.Next(HtmlTag.Div);                                // first <div> after this tag
 ```
+
+Wherever a `TagQuery` is expected, a plain `HtmlTag` or a tag name works too: it means "a tag with this name"
+(`tag.NextSibling(HtmlTag.Dd)`, `tag.NextSibling("dd")`, `tag.Parent("my-widget")`).
 
 Example: a definition list.
 
 ```csharp
-var price = doc.Find(HtmlTag.Dt, text: "Price").NextSibling(new TagQuery(HtmlTag.Dd)).Text();
+var price = doc.Find(HtmlTag.Dt, text: "Price").NextSibling(HtmlTag.Dd).Text();
 ```
 
 ## Text helpers for raw HTML
