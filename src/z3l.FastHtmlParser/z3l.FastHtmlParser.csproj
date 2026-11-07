@@ -20,7 +20,7 @@
     <Version>0.1.0</Version>
     <Authors>z3l</Authors>
     <Copyright>Copyright © 2026 z3l</Copyright>
-    <Description>Fast, low-allocation HTML/XML parser for scraping: span-based parsing, zero-allocation tag/attribute matching via enums, HTML5 entity decoding, text extraction with line breaks. Free for organizations under USD 1M annual revenue and under 100 employees; see the license.</Description>
+    <Description>Fast, low-allocation HTML/XML parser for scraping on .NET 9/10. About 10x (up to 36x) faster and 13–23x less memory than AngleSharp and HtmlAgilityPack in benchmarks. Zero-allocation tag/attribute matching, HTML5 entities, clean text extraction. Free for companies under USD 1M revenue and under 100 employees.</Description>
     <PackageTags>html;parser;html-parser;scraping;crawler;xml;rss;sitemap;html5;entities;span;performance</PackageTags>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>

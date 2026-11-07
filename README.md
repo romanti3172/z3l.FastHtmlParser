@@ -2,8 +2,9 @@
 
 Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 9 and .NET 10.
 
-- **Fast parsing.** 9.6–36x faster than AngleSharp and HtmlAgilityPack with 13–23x less memory (see the benchmarks); a 50 KB page parses in about 55 μs
-  with a single exact-size list of tags.
+- **Fast parsing.** About 10x faster than HtmlAgilityPack and AngleSharp on typical pages,
+  up to 36x on large ones, with 13–23x less memory (see the benchmarks); a 50 KB page parses in
+  about 55 μs with a single exact-size list of tags.
 - **No allocations when you match tags or attributes.** Use `HtmlTag` / `HtmlAttribute` enums
   (about 250 values each: HTML, SVG, MathML, RSS, Atom, sitemap) or plain strings.
 - **HTML5 entities.** All 2125 named references, legacy names without `;`, numeric references —
