@@ -6,6 +6,18 @@ namespace z3l.FastHtmlParser.Core;
 internal static class HtmlToTextCore
 {
     /// <summary>
+    /// Whether the '&lt;' at <paramref name="i"/> starts markup: as in HTML5, only before an ASCII letter, '/', '!' or '?'.
+    /// Otherwise ("a &lt; b", "&lt;3", a '&lt;' at the end) it is text.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool IsMarkupStart(ReadOnlySpan<char> value, int i)
+    {
+        if ((uint)(i + 1) >= (uint)value.Length) return false;
+        char next = value[i + 1];
+        return char.IsAsciiLetter(next) || next is '/' or '!' or '?';
+    }
+
+    /// <summary>
     /// <paramref name="value"/>[<paramref name="i"/>] is '&lt;'. Returns the index of the last char of what is not text there:
     /// a comment, a tag, or a tag together with invisible content (script, style, noscript, template, noframes, noembed)
     /// up to its end tag. -1: an unterminated tag, the rest is markup.
@@ -46,7 +58,7 @@ internal static class HtmlToTextCore
         {
             char c = value[i];
 
-            if (c == '<')
+            if (c == '<' && IsMarkupStart(value, i))
             {
                 int last = SkipMarkup(value, i);
                 if (last < 0) break;

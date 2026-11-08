@@ -15,7 +15,10 @@ public static class ParserTagExtensions
 
         var body = SpanHandlingCore.SpanBody(tag);
 
-        if (!tag.HasChildren())
+        // No child tags and no '<' at all: the body is the text. A '<' without a tag of its own
+        // (a stray end tag "x</span>", or "a < b") still goes through ClearTags,
+        // except in script, style, textarea, title, ...: their content is text as written.
+        if (!tag.HasChildren() && (!body.Contains('<') || ParsingCore.IsRawText(tag.Key)))
         {
             return body.Contains('&')
                 ? HtmlDecodeCore.HtmlDecode(body)

@@ -8,3 +8,6 @@ BenchmarkDotNet.Artifacts/
 artifacts/
 *.nupkg
 *.snupkg
+
+# Local pages for benchmarks: third-party content, never committed
+benchmarks/local/

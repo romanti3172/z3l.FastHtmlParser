@@ -125,7 +125,7 @@ public static class ParserTagMatchExtensions
         {
             char c = value[i];
 
-            if (c == '<')
+            if (c == '<' && HtmlToTextCore.IsMarkupStart(value, i))
             {
                 // tags, comments and invisible content (script, style, ...) are not text
                 int last = HtmlToTextCore.SkipMarkup(value, i);

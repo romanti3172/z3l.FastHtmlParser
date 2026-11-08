@@ -129,6 +129,81 @@ public sealed class ParserBehaviorTests
 
         Assert.AreEqual(2, doc.FindAllByName(HtmlTag.Li).Count());
         Assert.AreEqual(0, doc.FindByName(HtmlTag.P)!.Depth);
+        CollectionAssert.AreEqual(new[] { "one", "two" }, doc.FindAll(HtmlTag.Li).Select(li => li.Text()).ToArray());
+        Assert.IsTrue(doc.FindAll(HtmlTag.Li).All(li => li.Parent().IsName(HtmlTag.Ul)));
+    }
+
+    [TestMethod]
+    public void OptionalEndTags_AndTheEndOfTheDocument_CloseTags()
+    {
+        var doc = new HtmlParser("<table><tr><td>A<td>B<tr><td>C</table><dl><dt>Price<dd>100</dl><p>a<div>b</div><span>cut");
+
+        CollectionAssert.AreEqual(new[] { "A", "B", "C" }, doc.FindAll(HtmlTag.Td).Select(td => td.Text()).ToArray());
+        Assert.AreEqual(2, doc.FindAll(HtmlTag.Tr).Count());
+        Assert.AreEqual("100", doc.Find(HtmlTag.Dt, text: "Price").NextSibling(HtmlTag.Dd).Text());
+        Assert.AreEqual("a", doc.Find(HtmlTag.P).Text());
+        Assert.AreEqual(0, doc.Find(HtmlTag.Div)!.Depth);
+        Assert.AreEqual("cut", doc.Find(HtmlTag.Span).Text());
+    }
+
+    [TestMethod]
+    public void RepairedParts_KeepTheTagListConsistent()
+    {
+        var doc = new HtmlParser(
+            "<div id=a><ul><li>1<li>2</ul><table><tr><td>x<td>y</table></div><div id=b><p>p1<p>p2</div><ol><li>3<li>4");
+        var tags = doc.ToList();
+
+        for (int k = 0; k < tags.Count; k++)
+        {
+            // document order, and navigation by index still works
+            if (k > 0) Assert.IsLessThan(tags[k].Start, tags[k - 1].Start);
+            if (k + 1 < tags.Count) Assert.AreSame(tags[k], tags[k].Next().Previous());
+            Assert.IsGreaterThanOrEqualTo(tags[k].Start, tags[k].End);
+        }
+
+        CollectionAssert.AreEqual(new[] { "1", "2", "3", "4" }, doc.FindAll(HtmlTag.Li).Select(li => li.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "x", "y" }, doc.FindAll(HtmlTag.Td).Select(td => td.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "p1", "p2" }, doc.Find(HtmlTag.Div, id: "b").FindAll(HtmlTag.P).Select(p => p.Text()).ToArray());
+        Assert.AreEqual(0, doc.Find(HtmlTag.Div, id: "b")!.Depth);
+        Assert.AreEqual(0, doc.Find(HtmlTag.Ol)!.Depth);
+        Assert.IsTrue(doc.FindAll(HtmlTag.Li).All(li => li.Depth == li.Parent()!.Depth + 1));
+    }
+
+    [TestMethod]
+    public void TwoMistakesAtOnce_AreRepaired()
+    {
+        // the second <option>/<li> does not see its open sibling on top of the stack (a <b>/<i> is open inside it)
+        var select = new HtmlParser("<select><option value=1><b>One<option value=2>Two</select><span>s</span>");
+        CollectionAssert.AreEqual(new[] { "One", "Two" }, select.FindAll(HtmlTag.Option).Select(o => o.Text()).ToArray());
+        Assert.IsTrue(select.FindAll(HtmlTag.Option).All(o => o.Parent().IsName(HtmlTag.Select)));
+        Assert.AreEqual(0, select.Find(HtmlTag.Span)!.Depth);
+
+        var list = new HtmlParser("<ol><li><i>a<li>b<li><b>c<li>d");
+        CollectionAssert.AreEqual(new[] { "a", "b", "c", "d" }, list.FindAll(HtmlTag.Li).Select(li => li.Text()).ToArray());
+        Assert.IsTrue(list.FindAll(HtmlTag.Li).All(li => li.Parent().IsName(HtmlTag.Ol)));
+    }
+
+    [TestMethod]
+    public void BlockElement_EndsAP_EvenWhenTheMarkupIsBalanced()
+    {
+        // balanced, so the stack shows nothing wrong; a browser still ends the <p> at the <div>
+        // (and turns the stray </p> into an empty <p>, which this parser does not create)
+        var doc = new HtmlParser("<p>text<div>block</div></p><span>s</span>");
+
+        Assert.AreEqual("text", doc.Find(HtmlTag.P).Text());
+        Assert.AreEqual(0, doc.Find(HtmlTag.Div)!.Depth);
+        Assert.AreEqual(0, doc.Find(HtmlTag.Span)!.Depth);
+    }
+
+    [TestMethod]
+    public void LessThanSign_NotFollowedByANameIsText()
+    {
+        var doc = new HtmlParser("<p>if a < b and c > d, 1 <3</p><div>x</span></div>");
+
+        Assert.AreEqual(2, doc.Count());
+        Assert.AreEqual("if a < b and c > d, 1 <3", doc.Find(HtmlTag.P).Text());
+        Assert.IsTrue(doc.Find(HtmlTag.P).IsText("if a < b and c > d, 1 <3"));
+        Assert.AreEqual("x", doc.Find(HtmlTag.Div).Text());
     }
 
     [TestMethod]

@@ -5,8 +5,8 @@ Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 
 **Website:** https://romanti3172.github.io/z3l.FastHtmlParser/ · **NuGet:** https://www.nuget.org/packages/z3l.FastHtmlParser
 
 - **Fast parsing.** About 10x faster than HtmlAgilityPack and AngleSharp on typical pages,
-  up to 36x on large ones, with 13–23x less memory (see the benchmarks); a 50 KB page parses in
-  about 55 μs with a single exact-size list of tags.
+  up to 33x on large ones, with 12–23x less memory (see the benchmarks); a 50 KB page parses in
+  about 60 μs with a single exact-size list of tags.
 - **No allocations when you match tags or attributes.** Use `HtmlTag` / `HtmlAttribute` enums
   (about 250 values each: HTML, SVG, MathML, RSS, Atom, sitemap) or plain strings.
 - **HTML5 entities.** All 2125 named references, legacy names without `;`, numeric references —
@@ -139,7 +139,11 @@ The parser builds a flat list of tags, not a full DOM, and follows the HTML rule
 - Void elements (`img`, `br`, `meta`, `link`, `input`, `hr`, ...) and `<!doctype>` never contain other tags.
 - `Text()`, `IsText` and `TextLineBreaks()` return the visible text: comments and the content of `script`, `style`,
   `noscript`, `template`, `noframes`, `noembed` are skipped (`Text()` of a `<script>` itself still gives its code).
-- Unclosed tags are closed by the end tag of an enclosing element (`<li>one<li>two</ul>`).
+- Optional end tags work as in HTML5: a new `<li>` ends an open `<li>`, `<td>`/`<tr>` end open cells and rows,
+  `<dt>`/`<dd>` and `<option>` end their open siblings, a block element (`<div>`, `<ul>`, `<table>`, ...) ends an open `<p>`.
+- Tags left open are ended by the end tag of an enclosing element (`<li>one<li>two</ul>`) or by the end of the document,
+  so a truncated page keeps its text.
+- `<` starts a tag only before a letter, `/`, `!` or `?`: in `a < b` it is text. Stray end tags (`x</span>`) are not text.
 - Quoted attribute values may contain `<` and `>`.
 - A document that starts with `<?xml` (RSS, Atom, sitemap, XHTML) is parsed by XML rules:
   an element is closed only by its end tag or `/>`, so an RSS `<link>` keeps its content.
@@ -147,8 +151,9 @@ The parser builds a flat list of tags, not a full DOM, and follows the HTML rule
   compare decoded values. `AttributeBody` returns the value exactly as written. Links (`AttributeHref`, `AttributeSrc`)
   are not decoded, only resolved against the page URL with `&amp;`, `%3f`, `%3d` unescaped.
 
-On the test pages the parser finds the same elements, texts, attribute values and parents as AngleSharp,
-apart from the trees a browser builds implicitly (an inserted `<tbody>`, an ignored second `<body>`).
+On the test pages and on a set of broken-markup snippets (left-out end tags, stray end tags, truncated pages)
+the parser finds the same elements, texts, attribute values and parents as AngleSharp, apart from the trees
+a browser builds implicitly (an inserted `<tbody>`, an ignored second `<body>`).
 
 ## Tests and benchmarks
 
@@ -163,9 +168,9 @@ with AngleSharp and HtmlAgilityPack; see [benchmarks/README.md](benchmarks/READM
 
 | books.toscrape.com, 51 KB: parse + extract 20 books | Mean | Allocated |
 |---|---:|---:|
-| **z3l.FastHtmlParser** | **65 μs** | **47 KB** |
-| HtmlAgilityPack | 799 μs (12x) | 1,038 KB (22x) |
-| AngleSharp | 1,016 μs (16x) | 707 KB (15x) |
+| **z3l.FastHtmlParser** | **71 μs** | **45 KB** |
+| HtmlAgilityPack | 862 μs (12x) | 1,038 KB (23x) |
+| AngleSharp | 1,160 μs (16x) | 707 KB (16x) |
 
 ## License
 

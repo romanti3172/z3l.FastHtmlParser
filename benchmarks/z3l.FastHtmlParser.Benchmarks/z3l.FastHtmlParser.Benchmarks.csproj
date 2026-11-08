@@ -15,6 +15,8 @@
 
   <ItemGroup>
     <None Include="..\..\tests\z3l.FastHtmlParser.Tests\Fixtures\**\*.html" LinkBase="Fixtures" CopyToOutputDirectory="PreserveNewest" />
+    <!-- benchmarks/local: pages saved locally (third-party content, git-ignored); none in a fresh clone -->
+    <None Include="..\local\*.html" LinkBase="Local" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
