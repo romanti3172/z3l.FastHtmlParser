@@ -41,11 +41,13 @@ The setup checks that all three libraries return exactly the same records.
 - **Books** (books.toscrape.com, 51 KB): 20 books → title, price, rating.
 - **Quotes** (quotes.toscrape.com, 11 KB): 10 quotes → text, author, tags.
 
-AngleSharp uses CSS selectors, HtmlAgilityPack XPath, z3l.FastHtmlParser its `Find*` methods.
+AngleSharp uses CSS selectors, HtmlAgilityPack XPath, z3l.FastHtmlParser its `Find*` methods and, in the
+"XPath" row, the same XPath expressions as HtmlAgilityPack.
 
 | Task | Library | Mean | Ratio | Allocated | Alloc Ratio |
 |---|---|---:|---:|---:|---:|
 | Books | **z3l.FastHtmlParser** | **71.4 μs** | **1.00** | **44.8 KB** | **1.00** |
+| | z3l.FastHtmlParser XPath | 109.1 μs | 1.5x | 173.4 KB | 3.9x |
 | | HtmlAgilityPack | 861.7 μs | 12.1x | 1,038.2 KB | 23.2x |
 | | AngleSharp | 1,160.4 μs | 16.3x | 707.3 KB | 15.8x |
 | Quotes | **z3l.FastHtmlParser** | **24.1 μs** | **1.00** | **18.4 KB** | **1.00** |
@@ -62,7 +64,7 @@ parsing takes 0.72 ms against 12.3 ms (HtmlAgilityPack) and 16.3 ms (AngleSharp)
 (ASIN, price, name, rating, Prime) 0.90 ms against 18.0 ms and 19.8 ms, with 23–29x less memory.
 
 z3l.FastHtmlParser does less than a full DOM parser: it does not build a tree with implicit elements
-(`<tbody>`, `<html>`, `<head>`), does not support CSS selectors or XPath, and its documents are read-only.
+(`<tbody>`, `<html>`, `<head>`), does not support CSS selectors (XPath 1.0 is supported), and its documents are read-only.
 It does apply the HTML5 optional-end-tag rules (`<li>`, `<p>`, `<td>`, `<tr>`, `<dt>`/`<dd>`, `<option>`),
 so pages with left-out end tags give the same elements and texts. For extracting data from pages, the results
 are the same: on the test pages and on a set of broken-markup snippets it finds the same elements, texts,

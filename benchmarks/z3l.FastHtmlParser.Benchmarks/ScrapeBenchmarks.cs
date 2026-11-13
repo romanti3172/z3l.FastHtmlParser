@@ -29,6 +29,7 @@ public class ScrapeBenchmarks
         _quotes = Corpus.Get(Corpus.Quotes);
 
         Same(Books_FastHtmlParser(), Books_AngleSharp(), Books_HtmlAgilityPack());
+        Same(Books_FastHtmlParser(), Books_FastHtmlParser_XPath(), Books_HtmlAgilityPack());
         Same(Quotes_FastHtmlParser(), Quotes_AngleSharp(), Quotes_HtmlAgilityPack());
     }
 
@@ -53,6 +54,27 @@ public class ScrapeBenchmarks
                 pod.FindByName(HtmlTag.H3).FindByName(HtmlTag.A).AttributeTitle(),
                 pod.FindByNameClass(HtmlTag.P, "price_color").Text()!,
                 LastWord(pod.FindByNameClass(HtmlTag.P, "star-rating").AttributeClass())));
+        }
+        return result;
+    }
+
+    // the same XPath expressions as the HtmlAgilityPack version
+    private static readonly XPathQuery PodsXPath = XPathQuery.Compile("//article[contains(concat(' ', @class, ' '), ' product_pod ')]");
+    private static readonly XPathQuery TitleXPath = XPathQuery.Compile(".//h3/a/@title");
+    private static readonly XPathQuery PriceXPath = XPathQuery.Compile(".//p[contains(concat(' ', @class, ' '), ' price_color ')]");
+    private static readonly XPathQuery RatingXPath = XPathQuery.Compile(".//p[contains(concat(' ', @class, ' '), ' star-rating ')]/@class");
+
+    [Benchmark]
+    [BenchmarkCategory("Books")]
+    public List<Book> Books_FastHtmlParser_XPath()
+    {
+        var result = new List<Book>(20);
+        foreach (var pod in new HtmlParser(_books).XPath(PodsXPath))
+        {
+            result.Add(new Book(
+                pod.XPathValue(TitleXPath)!,
+                pod.XPathValue(PriceXPath)!,
+                LastWord(pod.XPathValue(RatingXPath)!)));
         }
         return result;
     }

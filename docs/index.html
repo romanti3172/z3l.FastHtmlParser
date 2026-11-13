@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>z3l.FastHtmlParser: fast HTML parser for .NET</title>
-  <meta name="description" content="Fast, low-allocation HTML/XML parser for web scraping on .NET 9 and 10. 10–33x faster and 12–23x less memory than AngleSharp and HtmlAgilityPack.">
+  <meta name="description" content="Fast, low-allocation HTML/XML parser with XPath 1.0 for web scraping on .NET 9 and 10. 10–30x faster and 12–23x less memory than AngleSharp and HtmlAgilityPack.">
   <meta property="og:title" content="z3l.FastHtmlParser: fast HTML parser for .NET">
-  <meta property="og:description" content="Parse and scrape HTML 10–33x faster than AngleSharp and HtmlAgilityPack, with 12–23x less memory.">
+  <meta property="og:description" content="Parse and scrape HTML 10–30x faster than AngleSharp and HtmlAgilityPack, with 12–23x less memory. Typed queries or XPath 1.0.">
   <meta property="og:image" content="icon.png">
   <link rel="icon" href="icon.png" type="image/png">
   <link rel="stylesheet" href="style.css">
@@ -28,8 +28,8 @@
 
 <main>
   <div class="wrap hero">
-    <div class="eyebrow">.NET 9 &amp; .NET 10 · HTML · XML · RSS · Sitemaps</div>
-    <h1>Scrape HTML <span class="hl">10–33x faster</span> in&nbsp;.NET</h1>
+    <div class="eyebrow">.NET 9 &amp; .NET 10 · HTML · XML · RSS · Sitemaps · XPath</div>
+    <h1>Scrape HTML <span class="hl">10–30x faster</span> in&nbsp;.NET</h1>
     <p class="lead">z3l.FastHtmlParser is a low-allocation HTML/XML parser built for scraping and data extraction.
       Same results as AngleSharp and HtmlAgilityPack, with a fraction of the CPU time and memory.</p>
     <div class="hero-actions">
@@ -42,7 +42,7 @@
     </div>
 
     <div class="stats">
-      <div class="stat"><b>10–33x</b><span>faster parsing</span></div>
+      <div class="stat"><b>10–30x</b><span>faster parsing</span></div>
       <div class="stat"><b>13–23x</b><span>less memory</span></div>
       <div class="stat"><b>0</b><span>allocations to match tags</span></div>
       <div class="stat"><b>60 μs</b><span>to parse a 50 KB page</span></div>
@@ -54,12 +54,13 @@
       <div>
         <div class="section-head">
           <h2>Scraping code that reads like the page</h2>
-          <p>No CSS selector strings to parse, no XPath. Typed tags and attributes, and chains that never throw.</p>
+          <p>Typed tags and attributes, and chains that never throw. Prefer XPath? That works too.</p>
         </div>
         <ul class="code-points">
           <li><span class="dot">1</span><div><b>Typed and allocation-free</b><span>About 250 tags and 250 attributes as enums: HTML, SVG, MathML, RSS, Atom, sitemaps.</span></div></li>
           <li><span class="dot">2</span><div><b>Null-safe chains</b><span>A missing element gives <code>null</code> at the end of the chain, not an exception.</span></div></li>
           <li><span class="dot">3</span><div><b>Absolute links</b><span><code>AttributeHref()</code> resolves links against the page URL for you.</span></div></li>
+          <li><span class="dot">4</span><div><b>XPath 1.0</b><span><code>doc.XPath("//div[@class='card']/a")</code> and <code>XPathValues("//a/@href")</code>, compiled and cached.</span></div></li>
         </ul>
       </div>
 <pre class="code"><code><span class="k">using</span> z3l.FastHtmlParser;
@@ -80,7 +81,10 @@
                      .<span class="m">FindAll</span>(<span class="t">HtmlTag</span>.A))
 {
     <span class="t">Console</span>.<span class="m">WriteLine</span>(a.<span class="m">AttributeHref</span>());
-}</code></pre>
+}
+
+<span class="c">// or XPath 1.0</span>
+<span class="k">var</span> links = doc.<span class="m">XPathValues</span>(<span class="s">"//div[@class='gallery']//a/@href"</span>);</code></pre>
     </div>
   </section>
 
@@ -127,13 +131,13 @@
         </div>
         <div class="feature">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h13"/></svg></div>
-          <h3>Clean text</h3>
-          <p><code>Text()</code> gives visible text; <code>TextLineBreaks()</code> keeps lines and paragraphs.</p>
+          <h3>Clean text, real entities</h3>
+          <p><code>Text()</code> gives visible text; <code>TextLineBreaks()</code> keeps lines and paragraphs. All 2125 HTML5 entities decoded like a browser.</p>
         </div>
         <div class="feature">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7 3 12l5 5M16 7l5 5-5 5"/></svg></div>
-          <h3>HTML5 entities</h3>
-          <p>All 2125 named references, legacy names without <code>;</code> and numeric references, decoded like a browser.</p>
+          <h3>XPath 1.0</h3>
+          <p>All axes, predicates and functions. About 7x faster than HtmlAgilityPack running the same expressions.</p>
         </div>
         <div class="feature">
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg></div>
@@ -146,7 +150,7 @@
           <p>A parsed document is read-only: query it from any number of threads. Trimming and Native AOT compatible.</p>
         </div>
       </div>
-      <p class="honest"><b>What it is not.</b> It builds a flat list of tags, not a full DOM: no CSS selectors or XPath,
+      <p class="honest"><b>What it is not.</b> It builds a flat list of tags, not a full DOM: no CSS selectors,
         no implicit <code>&lt;tbody&gt;</code>, read-only documents. For extracting data it finds the same elements,
         texts and attributes as AngleSharp; the test suite checks this on every saved page.</p>
     </div>
@@ -257,7 +261,7 @@
   // Benchmark results from benchmarks/README.md (time in μs, memory in KB).
   const BENCH = [
     { id: "scrape-books", tab: "Scrape 20 books", desc: "books.toscrape.com, 51 KB: parse and extract title, price, rating",
-      rows: [["z3l.FastHtmlParser", 71.4, 44.8], ["HtmlAgilityPack", 861.7, 1038.2], ["AngleSharp", 1160.4, 707.3]] },
+      rows: [["z3l.FastHtmlParser", 71.4, 44.8], ["z3l.FastHtmlParser XPath", 109.1, 173.4], ["HtmlAgilityPack", 861.7, 1038.2], ["AngleSharp", 1160.4, 707.3]] },
     { id: "parse-books", tab: "Parse 51 KB page", desc: "books.toscrape.com, 51 KB",
       rows: [["z3l.FastHtmlParser", 62.9, 39.2], ["HtmlAgilityPack", 653.8, 812.4], ["AngleSharp", 1104.1, 663.4]] },
     { id: "parse-large", tab: "Parse 510 KB page", desc: "books.toscrape.com x10, 510 KB",
