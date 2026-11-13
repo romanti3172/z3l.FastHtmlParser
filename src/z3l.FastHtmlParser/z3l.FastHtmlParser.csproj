@@ -18,11 +18,11 @@
   <PropertyGroup>
     <PackageId>z3l.FastHtmlParser</PackageId>
     <Title>Fast HTML Parser</Title>
-    <Version>1.1.2</Version>
+    <Version>1.1.3</Version>
     <Authors>z3l</Authors>
     <Copyright>Copyright © 2026 z3l</Copyright>
-    <Description>Fast, low-allocation HTML/XML parser for scraping on .NET 9/10. About 10x (up to 33x) faster and 12–23x less memory than AngleSharp and HtmlAgilityPack in benchmarks. Zero-allocation tag/attribute matching, HTML5 entities, clean text extraction. Free for companies under USD 1M revenue and under 100 employees.</Description>
-    <PackageTags>html;parser;html-parser;htmlparser;fasthtmlparser;fast-html-parser;htmlscraper;html-scraper;scraping;crawler;xml;rss;sitemap;html5;entities;span;performance;web-scraping;scraper;html-to-text;text-extraction;dom;fast;low-allocation;zero-allocation;dotnet;csharp;net9;net10;aot;htmlagilitypack-alternative;anglesharp-alternative</PackageTags>
+    <Description>Fast, low-allocation HTML/XML parser for web scraping on .NET 9/10. About 10x (up to 33x) faster and 12–23x less memory than AngleSharp and HtmlAgilityPack in benchmarks. Zero-allocation tag/attribute matching, HTML5 entities, clean HTML to text extraction. Free for companies under USD 1M revenue and under 100 employees.</Description>
+    <PackageTags>html;parser;html-parser;htmlparser;fasthtmlparser;fast-html-parser;htmlscraper;html-scraper;scraping;crawler;xml;rss;sitemap;html5;entities;span;performance;web;web-scraping;webscraping;scraper;text;html-to-text;htmltotext;text-extraction;dom;fast;low-allocation;zero-allocation;dotnet;csharp;net9;net10;aot;htmlagilitypack-alternative;anglesharp-alternative</PackageTags>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
