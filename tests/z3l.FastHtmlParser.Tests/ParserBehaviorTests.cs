@@ -113,6 +113,75 @@ public sealed class ParserBehaviorTests
     }
 
     [TestMethod]
+    public void SelfClosingTags_WithoutASpace_KeepTheirName()
+    {
+        var doc = new HtmlParser("<div>a<br/>b<hr/><svg><path/><use href=\"#x\"/></svg><br />c<my-icon/></div>");
+
+        Assert.AreEqual(2, doc.FindAll(HtmlTag.Br).Count());
+        Assert.AreEqual(2, doc.FindAll("br").Count());
+        Assert.HasCount(2, doc.XPath("//br"));
+        Assert.AreEqual(1, doc.FindAll(HtmlTag.Hr).Count());
+        Assert.AreEqual(1, doc.FindAll(HtmlTag.Path).Count());
+        Assert.AreEqual("my-icon", doc.Find("my-icon")!.Name);
+        Assert.IsTrue(doc.All(tag => !tag.Name!.Contains('/')));
+        Assert.IsTrue(doc.FindAll(HtmlTag.Br).All(br => br.Parent().IsName(HtmlTag.Div)));
+
+        var rss = new HtmlParser("<?xml version=\"1.0\"?><rss><channel><item/><item><title>t</title></item></channel></rss>");
+        Assert.AreEqual(2, rss.FindAll(HtmlTag.Item).Count());
+        Assert.AreEqual("t", rss.FindAll(HtmlTag.Item).Last().Text());
+    }
+
+    [TestMethod]
+    [DataRow("<a></a    >")]   // the padding made the position equal to the length of the name
+    [DataRow("<a></a   >")]
+    [DataRow("<a>x</a\n>")]
+    public void EndTag_MayHaveWhitespaceBeforeTheBracket(string html)
+    {
+        var doc = new HtmlParser(html);
+
+        Assert.HasCount(1, doc);
+        Assert.AreEqual(html.Length - 1, doc.First().End);
+    }
+
+    [TestMethod]
+    public void EndTag_IsMatchedAgain_WhenTheRulesEndedItsTag()
+    {
+        // the second <li> ends the first one together with its <div>, as in a browser: </div> has nothing to end
+        var doc = new HtmlParser("<ul><li>one<div><li>two<span>x<li>three</div></ul><p>after</p>");
+        var ul = doc.Find(HtmlTag.Ul)!;
+        var div = doc.Find(HtmlTag.Div)!;
+
+        CollectionAssert.AreEqual(new[] { "one", "twox", "three" }, doc.FindAll(HtmlTag.Li).Select(li => li.Text()).ToArray());
+        Assert.IsTrue(doc.FindAll(HtmlTag.Li).All(li => ReferenceEquals(li.Parent(), ul)));
+        Assert.AreEqual("", div.Body());
+        Assert.IsLessThan(doc.FindAll(HtmlTag.Li).ElementAt(1).Start, div.End);
+        Assert.AreEqual(0, doc.Find(HtmlTag.P)!.Depth);
+    }
+
+    [TestMethod]
+    public void SelfClosedTag_IsNotEndedAfterItsParent()
+    {
+        // </span> comes after </b>: a browser ignores it, the <span/> stays inside <b>
+        var doc = new HtmlParser("<b><span />x</b>y</span><i>z</i>");
+        var b = doc.Find(HtmlTag.B)!;
+        var span = doc.Find(HtmlTag.Span)!;
+
+        Assert.AreSame(b, span.Parent());
+        Assert.IsLessThan(b.End, span.End);
+        Assert.AreEqual("x", b.Text());
+        Assert.AreEqual(0, doc.Find(HtmlTag.I)!.Depth);
+    }
+
+    [TestMethod]
+    [DataRow("<!--<")]                 // an unfinished comment ends with the source
+    [DataRow("<p>a <<div>x</div>")]    // the <p> is ended by the <div>: its last char is a '<'
+    [DataRow("<b>x</b>")]
+    public void TextAfterTagUntilNextOne_NothingAfterTheTag(string html)
+    {
+        Assert.AreEqual("", new HtmlParser(html).First().TextAfterTagUntilNextOne());
+    }
+
+    [TestMethod]
     public void QuotedAttributeValuesMayContainAngleBrackets()
     {
         var doc = new HtmlParser("<div data-x=\"<p>not a tag</p>\" title='a > b'><p>real</p></div>");

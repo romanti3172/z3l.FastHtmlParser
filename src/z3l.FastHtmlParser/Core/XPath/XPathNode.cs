@@ -90,12 +90,52 @@ internal ref struct AttributeScanner
     private readonly int _end; // exclusive: the closing '>' of the opening tag
     private int _pos;
 
+    /// <summary>Position of the '&gt;' that ends the opening tag of <paramref name="tag"/>.</summary>
+    public static int OpenTagEnd(ParserTag tag, int sourceLength)
+    {
+        var openEnd = tag.InnerStart > 0 && tag.InnerEnd > 0 ? tag.InnerStart - 1 : tag.End;
+        return Math.Min(openEnd, sourceLength);
+    }
+
+    /// <summary>
+    /// Reads the value that follows an attribute name: <paramref name="position"/> is right after the name,
+    /// <paramref name="end"/> is the closing '&gt;' of the opening tag. Quoted, or unquoted up to the next whitespace;
+    /// <paramref name="valueStart"/> is -1 when the name has no '='. Returns the position after the value.
+    /// </summary>
+    public static int ReadValue(ReadOnlySpan<char> s, int position, int end, out int valueStart, out int valueLength)
+    {
+        var p = position;
+        while (p < end && char.IsWhiteSpace(s[p])) p++;
+
+        if (p >= end || s[p] != '=')
+        {
+            valueStart = -1;
+            valueLength = 0;
+            return position;
+        }
+
+        p++;
+        while (p < end && char.IsWhiteSpace(s[p])) p++;
+
+        if (p < end && (s[p] == '"' || s[p] == '\''))
+        {
+            var quote = s[p];
+            valueStart = p + 1;
+            var close = s[valueStart..end].IndexOf(quote);
+            valueLength = close < 0 ? end - valueStart : close;
+            return close < 0 ? end : valueStart + close + 1;
+        }
+
+        valueStart = p;
+        while (p < end && !char.IsWhiteSpace(s[p])) p++;
+        valueLength = p - valueStart;
+        return p;
+    }
+
     public AttributeScanner(ParserTag tag)
     {
         _source = tag.Document.PageSource;
-
-        var openEnd = tag.InnerStart > 0 && tag.InnerEnd > 0 ? tag.InnerStart - 1 : tag.End;
-        _end = Math.Min(openEnd, _source.Length);
+        _end = OpenTagEnd(tag, _source.Length);
 
         // skip '<' and the name
         var i = tag.Start + 1;
@@ -131,36 +171,7 @@ internal ref struct AttributeScanner
                 continue;
             }
 
-            var p = _pos;
-            while (p < _end && char.IsWhiteSpace(s[p])) p++;
-
-            if (p < _end && s[p] == '=')
-            {
-                p++;
-                while (p < _end && char.IsWhiteSpace(s[p])) p++;
-
-                if (p < _end && (s[p] == '"' || s[p] == '\''))
-                {
-                    var quote = s[p];
-                    valueStart = p + 1;
-                    var close = s[valueStart.._end].IndexOf(quote);
-                    valueLength = close < 0 ? _end - valueStart : close;
-                    _pos = close < 0 ? _end : valueStart + close + 1;
-                }
-                else
-                {
-                    valueStart = p;
-                    while (p < _end && !char.IsWhiteSpace(s[p])) p++;
-                    valueLength = p - valueStart;
-                    _pos = p;
-                }
-            }
-            else
-            {
-                valueStart = -1;
-                valueLength = 0;
-            }
-
+            _pos = ReadValue(s, _pos, _end, out valueStart, out valueLength);
             return true;
         }
 

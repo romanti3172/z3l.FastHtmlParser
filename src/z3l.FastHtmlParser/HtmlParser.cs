@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using z3l.FastHtmlParser.Core;
 
 namespace z3l.FastHtmlParser;
@@ -23,24 +25,44 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
     /// <param name="pageUrl">URL of the page; relative links (<c>AttributeHref</c>, <c>AttributeSrc</c>) are resolved against it.</param>
     public HtmlParser(string? pageSource, string? pageUrl = default)
     {
-        if (!string.IsNullOrEmpty(pageUrl)) PageUrl = pageUrl;
+        if (!string.IsNullOrEmpty(pageUrl)) _pageUrl = pageUrl;
 
         if (!string.IsNullOrEmpty(pageSource))
         {
-            PageSource = pageSource;
-            Data = ParsingCore.ParsePagesource(this, PageSource);
+            _pageSource = pageSource;
+            _data = ParsingCore.ParsePagesource(this, pageSource);
         }
         else
         {
-            Data = [];
+            _data = [];
         }
     }
 
+    private readonly List<ParserTag> _data;
+    private string _pageSource = string.Empty;
+    private string _pageUrl = string.Empty;
+
     /// <summary>The parsed source text.</summary>
-    public string PageSource { get; private set; } = string.Empty;
+    /// <exception cref="ObjectDisposedException">The document has been disposed.</exception>
+    public string PageSource
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return _pageSource;
+        }
+    }
 
     /// <summary>URL of the page, used to resolve relative links.</summary>
-    public string PageUrl { get; private set; } = string.Empty;
+    /// <exception cref="ObjectDisposedException">The document has been disposed.</exception>
+    public string PageUrl
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return _pageUrl;
+        }
+    }
 
     // PageUrl parsed once, for resolving relative links (AttributeHref/AttributeSrc).
     private Uri? _pageUri;
@@ -59,7 +81,16 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
         }
     }
 
-    internal List<ParserTag> Data { get; }
+    // Every search, navigation and text method of the document and of its tags reads the tag list or the source
+    // through these properties, so after Dispose all of them fail the same way.
+    internal List<ParserTag> Data
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return _data;
+        }
+    }
 
     // ITagSearchable
 
@@ -80,7 +111,6 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
 
     IEnumerator IEnumerable.GetEnumerator()
     {
-        ThrowIfDisposed();
         return Data.GetEnumerator();
     }
 
@@ -88,7 +118,11 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
 
     private bool _disposed;
 
-    /// <summary>Releases the tag list and the source text early.</summary>
+    /// <summary>
+    /// Releases the tag list and the source text early. Disposing is optional: the document holds no unmanaged resources.
+    /// Afterwards the document and the tags taken from it cannot be used: their properties and methods
+    /// throw <see cref="ObjectDisposedException"/>.
+    /// </summary>
     public void Dispose()
     {
         Dispose(true);
@@ -104,14 +138,19 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
 
         if (disposing)
         {
-            Data.Clear();
-            PageSource = string.Empty;
-            PageUrl = string.Empty;
+            _data.Clear();
+            _pageSource = string.Empty;
+            _pageUrl = string.Empty;
         }
     }
 
+    // On the path of every tag read: one inlined field test, the throw is kept out of line.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_disposed) ThrowDisposed();
     }
+
+    [DoesNotReturn]
+    private void ThrowDisposed() => throw new ObjectDisposedException(GetType().FullName);
 }

@@ -35,13 +35,20 @@ internal static class ParsingCore
     {
         public int Key;     // (int)HtmlTag, or -1 for a custom tag name
         public int Depth;
-        public bool Open;   // InnerEnd == 0
+        public bool SelfClosed; // <x/>: stays in the open list (a later </x> ends it), but does not nest anything
 
-        // Doubly linked list of open tags (in document order): a closing tag
-        // scans only open candidates instead of every tag before it.
+        // The open tags as a linked list in document order: an end tag scans only open candidates
+        // instead of every tag before it. Tags leave the list only as its tail (TruncateOpenList).
         public int PrevOpen;
-        public int NextOpen;
     }
+
+    // Nesting deeper than this is flattened, as browsers do (Blink: 512): a deeper tag does not nest the
+    // following ones. It bounds every scan of the stack of open tags, whatever the markup.
+    private const int MaxDepth = 512;
+
+    // The parts scanned again with the optional-end-tag rules (Repair) may add up to this many times
+    // the length of the source; past that the tags are just ended by their enclosing end tags.
+    private const int RepairBudgetFactor = 8;
 
     // parsing
     //
@@ -65,9 +72,11 @@ internal static class ParsingCore
         public TagState[] States;
         public int[] Stack;                 // indexes of the open tags that contain the following ones
         public int[]? OpenByKey;            // per HtmlTag, how many are on the stack: kept only in RulesMode
-        public Dictionary<string, string>? CustomNames;
+        public int[] OpenInList;            // per HtmlTag, how many are in the open list: an end tag with none is skipped
+        public Dictionary<string, int>? CustomNames; // lower-case custom name (one string per name per document) → how many are in the open list
         public int Count, StackTop, LastOpen;
         public int OpenP;                   // <p> tags on the stack, kept in both modes
+        public long RepairBudget;           // chars that may still be scanned again by Repair
     }
 
     internal static List<ParserTag> ParsePagesource(HtmlParser parent, ReadOnlySpan<char> pagesource)
@@ -87,8 +96,11 @@ internal static class ParsingCore
             Tags = ArrayPool<ParserTag>.Shared.Rent(maxTags),
             States = ArrayPool<TagState>.Shared.Rent(maxTags),
             Stack = ArrayPool<int>.Shared.Rent(64),
+            OpenInList = ArrayPool<int>.Shared.Rent(TagNames.Length),
             LastOpen = -1,
+            RepairBudget = RepairBudgetFactor * (long)pagesource.Length,
         };
+        Array.Clear(st.OpenInList, 0, TagNames.Length);
 
         try
         {
@@ -101,10 +113,8 @@ internal static class ParsingCore
             {
                 Repair(ref st, s, regionEnd);
             }
-            while (st.StackTop > 0)
-            {
-                CloseImplicitly(st.Tags, st.States, st.Stack[--st.StackTop], regionEnd - 1, ref st.LastOpen);
-            }
+            TruncateOpenList(st.Tags, st.States, 0, regionEnd - 1, st.OpenInList, st.CustomNames, ref st.LastOpen);
+            st.StackTop = 0;
 
             int count = st.Count;
             var tags = st.Tags;
@@ -129,6 +139,7 @@ internal static class ParsingCore
             ArrayPool<ParserTag>.Shared.Return(st.Tags);
             ArrayPool<TagState>.Shared.Return(st.States);
             ArrayPool<int>.Shared.Return(st.Stack);
+            ArrayPool<int>.Shared.Return(st.OpenInList);
             if (st.OpenByKey != null) ArrayPool<int>.Shared.Return(st.OpenByKey);
         }
     }
@@ -148,6 +159,7 @@ internal static class ParsingCore
         var states = st.States;
         var openTagsStack = st.Stack;
         int[]? openByKey = st.OpenByKey;
+        int[] openInList = st.OpenInList;
         int count = st.Count;
         int stackTop = st.StackTop;
         int lastOpen = st.LastOpen;
@@ -171,10 +183,11 @@ internal static class ParsingCore
                 {
                     // <!-- ... -->: one "!--" tag; its content is not markup, it does not nest anything.
                     int commentEnd = FindCommentEnd(pagesource, i + 4);
-                    var depth = stackTop > 0 ? states[openTagsStack[stackTop - 1]].Depth + 1 : 0;
+                    int commentParent = stackTop > 0 ? openTagsStack[stackTop - 1] : -1;
+                    var depth = commentParent >= 0 ? states[commentParent].Depth + 1 : 0;
 
-                    tags[count] = new ParserTag(parent, count, HtmlTag.Comment, null, i, commentEnd, commentEnd + 1, depth);
-                    states[count] = new TagState { Key = (int)HtmlTag.Comment, Depth = depth, Open = false, PrevOpen = -1, NextOpen = -1 };
+                    tags[count] = new ParserTag(parent, count, commentParent, HtmlTag.Comment, null, i, commentEnd, commentEnd + 1, depth);
+                    states[count] = new TagState { Key = (int)HtmlTag.Comment, Depth = depth, PrevOpen = -1 };
                     count++;
 
                     i = commentEnd + 1;
@@ -222,19 +235,30 @@ internal static class ParsingCore
             else // '>'
             {
                 // Обработка закрывающегося тега
-                if (pagesource[tagStartPosition] == '/' && tagStartPosition + 1 != i - tagStartPosition - 1)
+                if (pagesource[tagStartPosition] == '/')
                 {
                     var closingTagSpan = pagesource.Slice(tagStartPosition + 1, i - tagStartPosition - 1).Trim();
                     if (!closingTagSpan.IsEmpty)
                     {
-                        // Resolve the closing name once, then compare ints instead of a dictionary lookup per candidate.
+                        // Resolve the closing name once, then compare ints (references, for a custom name) instead of
+                        // a dictionary lookup per candidate.
                         int closingKey = SpanLookup.TryGetValue(closingTagSpan, out HtmlTag closingTag) ? (int)closingTag : -1;
+                        string? closingName = null;
+                        bool anyOpen;
+                        bool repaired = false;
 
-                        for (int j = lastOpen; j >= 0; j = states[j].PrevOpen)
+                    MatchEndTag:
+                        // A name that no open tag has is a stray end tag: it is skipped right here, without scanning the open tags.
+                        anyOpen = closingKey >= 0
+                            ? openInList[closingKey] > 0
+                            : TryGetOpenCustomName(st.CustomNames, closingTagSpan, out closingName);
+
+                        for (int j = anyOpen ? lastOpen : -1; j >= 0; j = states[j].PrevOpen)
                         {
-                            bool isMatch = states[j].Key >= 0
+                            // a custom name is one string instance per document (InternLowerName)
+                            bool isMatch = closingKey >= 0
                                 ? states[j].Key == closingKey
-                                : MemoryExtensions.Equals(closingTagSpan, tags[j].CustomName, StringComparison.OrdinalIgnoreCase);
+                                : ReferenceEquals(tags[j].CustomName, closingName);
 
                             if (isMatch)
                             {
@@ -242,7 +266,7 @@ internal static class ParsingCore
 
                                 // Tags left open inside it: if the optional-end-tag rules apply to one of them,
                                 // scan its part again with the rules (FastMode only; RulesMode has applied them).
-                                if (!TMode.Rules && !isXml && stackTop > 0 && openTagsStack[stackTop - 1] > j)
+                                if (!TMode.Rules && !isXml && !repaired && stackTop > 0 && openTagsStack[stackTop - 1] > j)
                                 {
                                     int above = stackTop - 1;
                                     while (above > 0 && openTagsStack[above - 1] > j) above--;
@@ -253,32 +277,29 @@ internal static class ParsingCore
                                         Repair(ref st, target, tagStartPosition - 1);
                                         count = st.Count; stackTop = st.StackTop; lastOpen = st.LastOpen; openP = st.OpenP; openTagsStack = st.Stack;
                                         openByKey = st.OpenByKey;
+
+                                        // The rules may have ended the matched tag itself (<li><div><li>x</div>: the second <li>
+                                        // ends the first one together with its <div>, as in a browser): the end tag is matched
+                                        // again, to what is open now. Once: the part is not scanned a second time.
+                                        repaired = true;
+                                        goto MatchEndTag;
                                     }
                                 }
 
-                                ref TagState state = ref states[j];
                                 tags[j].InnerEnd = innerEnd;
                                 tags[j].End = i;
-                                state.Open = innerEnd == 0;
 
-                                if (!state.Open)
-                                {
-                                    // unlink from the open list
-                                    int prev = state.PrevOpen, nextOpen = state.NextOpen;
-                                    if (prev >= 0) states[prev].NextOpen = nextOpen;
-                                    if (nextOpen >= 0) states[nextOpen].PrevOpen = prev;
-                                    else lastOpen = prev;
-                                }
-
-                                // The tags opened inside it and never closed end right before this end tag, as in a browser.
                                 while (stackTop > 0 && openTagsStack[stackTop - 1] >= j)
                                 {
-                                    int popped = openTagsStack[--stackTop];
-                                    int poppedKey = states[popped].Key;
+                                    int poppedKey = states[openTagsStack[--stackTop]].Key;
                                     if (poppedKey == (int)HtmlTag.P) openP--;
                                     if (TMode.Rules && poppedKey >= 0) openByKey![poppedKey]--;
-                                    if (popped != j) CloseImplicitly(tags, states, popped, innerEnd, ref lastOpen);
                                 }
+
+                                // It leaves the open list with everything opened after it. The tags opened inside it and
+                                // never closed end right before this end tag, as in a browser; a self-closed one (<span/>)
+                                // can no longer be ended by an end tag that comes after its parent's.
+                                TruncateOpenList(tags, states, j, innerEnd, openInList, st.CustomNames, ref lastOpen);
 
                                 break;
                             }
@@ -316,7 +337,8 @@ internal static class ParsingCore
                             {
                                 if (rule.AnyOpen(openByKey!))
                                 {
-                                    CloseInScope(rule, tags, states, openTagsStack, ref stackTop, openByKey, ref openP, tagStartPosition - 2, ref lastOpen);
+                                    CloseInScope(rule, tags, states, openTagsStack, ref stackTop, openByKey, ref openP, tagStartPosition - 2,
+                                        openInList, st.CustomNames, ref lastOpen);
                                 }
                             }
                             // FastMode: the common case of a left-out end tag is caught right here, with no scan again:
@@ -335,7 +357,8 @@ internal static class ParsingCore
                         {
                             if (TMode.Rules)
                             {
-                                CloseInScope(PRule, tags, states, openTagsStack, ref stackTop, openByKey, ref openP, tagStartPosition - 2, ref lastOpen);
+                                CloseInScope(PRule, tags, states, openTagsStack, ref stackTop, openByKey, ref openP, tagStartPosition - 2,
+                                    openInList, st.CustomNames, ref lastOpen);
                             }
                             else
                             {
@@ -346,12 +369,14 @@ internal static class ParsingCore
                         }
                     }
 
-                    // Расчет уровней на лету с кастомным стеком
-                    var level = stackTop > 0 ? states[openTagsStack[stackTop - 1]].Depth + 1 : 0;
+                    // Расчет уровней на лету с кастомным стеком: the innermost open tag is the parent
+                    int parentIndex = stackTop > 0 ? openTagsStack[stackTop - 1] : -1;
+                    var level = parentIndex >= 0 ? states[parentIndex].Depth + 1 : 0;
 
                     tags[count] = new ParserTag(
                         parent,
                         count,                          // index
+                        parentIndex,                    // index of the enclosing tag, -1 at the top level
                         htmlTagEnum,                    // HtmlTag name
                         htmlTagString,                  // name
                         tagStartPosition - 1,           // PositionStart
@@ -364,35 +389,43 @@ internal static class ParsingCore
                     // they do not nest the following tags and no end tag is matched to them.
                     bool isVoid = !isXml && key >= 0 && VoidTags[key];
 
-                    if (isVoid)
-                    {
-                        states[count] = new TagState { Key = key, Depth = level, Open = false, PrevOpen = -1, NextOpen = -1 };
-                    }
-                    else
-                    {
-                        states[count] = new TagState { Key = key, Depth = level, Open = true, PrevOpen = lastOpen, NextOpen = -1 };
-                        if (lastOpen >= 0) states[lastOpen].NextOpen = count;
-                        lastOpen = count;
-                    }
-
-                    count++;
-
                     // Проверка на самозакрытие без аллокаций
                     var trimmedSource = tagsource.TrimEnd();
                     bool isSelfClosing = isVoid || (trimmedSource.Length > 0 && trimmedSource[^1] == '/');
 
+                    if (isVoid)
+                    {
+                        states[count] = new TagState { Key = key, Depth = level, PrevOpen = -1 };
+                    }
+                    else
+                    {
+                        states[count] = new TagState { Key = key, Depth = level, SelfClosed = isSelfClosing, PrevOpen = lastOpen };
+                        lastOpen = count;
+
+                        // how many open tags have this name: an end tag with none is skipped without a scan
+                        if (key >= 0) openInList[key]++;
+                        else AdjustOpenCustomName(st.CustomNames, htmlTagString!, 1);
+                    }
+
+                    count++;
+
                     if (!isSelfClosing)
                     {
-                        if (stackTop == openTagsStack.Length)
+                        // Deeper than MaxDepth the tag is not nested: it stays in the open list for its end tag,
+                        // like a self-closed one, but ends with its enclosing tag if it has none.
+                        if (stackTop < MaxDepth)
                         {
-                            var bigger = ArrayPool<int>.Shared.Rent(stackTop * 2);
-                            openTagsStack.AsSpan().CopyTo(bigger);
-                            ArrayPool<int>.Shared.Return(openTagsStack);
-                            openTagsStack = bigger;
+                            if (stackTop == openTagsStack.Length)
+                            {
+                                var bigger = ArrayPool<int>.Shared.Rent(stackTop * 2);
+                                openTagsStack.AsSpan().CopyTo(bigger);
+                                ArrayPool<int>.Shared.Return(openTagsStack);
+                                openTagsStack = bigger;
+                            }
+                            openTagsStack[stackTop++] = count - 1;
+                            if (key == (int)HtmlTag.P) openP++;
+                            if (TMode.Rules && key >= 0) openByKey![key]++;
                         }
-                        openTagsStack[stackTop++] = count - 1;
-                        if (key == (int)HtmlTag.P) openP++;
-                        if (TMode.Rules && key >= 0) openByKey![key]++;
 
                         // <script>, <style>, <textarea>, <title>, ...: the content is text, not markup;
                         // continue right before the matching end tag.
@@ -451,9 +484,14 @@ internal static class ParsingCore
         int first = st.Stack[stackPosition];
         int from = st.Tags[first].Start;
 
-        // The open list is in document order: the tags from `first` on are its tail.
-        while (st.LastOpen >= first) st.LastOpen = states[st.LastOpen].PrevOpen;
-        if (st.LastOpen >= 0) states[st.LastOpen].NextOpen = -1;
+        // Nested repairs scan the same text again and again; past the budget the part is left as it is
+        // (its tags are ended by the enclosing end tag), so that parsing stays linear on any markup.
+        long cost = regionEnd - from;
+        if (cost > st.RepairBudget) return;
+        st.RepairBudget -= cost;
+
+        // The tags from `first` on are replaced: they leave the open list (they are its tail).
+        TruncateOpenList(st.Tags, states, first, -1, st.OpenInList, st.CustomNames, ref st.LastOpen);
 
         st.StackTop = stackPosition;
         st.Count = first;
@@ -473,21 +511,61 @@ internal static class ParsingCore
         Scan<RulesMode>(ref st, from, regionEnd, out _, out _);
     }
 
-    /// <summary>Ends an open tag that has no end tag of its own: its content runs up to <paramref name="end"/>.</summary>
-    private static void CloseImplicitly(ParserTag[] tags, TagState[] states, int index, int end, ref int lastOpen)
+    /// <summary>
+    /// Removes the tags from index <paramref name="first"/> on from the open list: it is in document order, so they are its tail.
+    /// With <paramref name="end"/> &gt;= 0 the ones that have no end tag of their own end there (their content runs up to
+    /// <paramref name="end"/>), as a browser ends them with the enclosing element; a self-closed tag (&lt;span/&gt;) stays
+    /// without content. Every tag is removed once, so all the scans of the open list together are linear.
+    /// </summary>
+    private static void TruncateOpenList(ParserTag[] tags, TagState[] states, int first, int end,
+        int[] openInList, Dictionary<string, int>? customNames, ref int lastOpen)
     {
-        ref TagState state = ref states[index];
-        if (!state.Open) return;
+        int k = lastOpen;
+        while (k >= first)
+        {
+            ref TagState state = ref states[k];
+            var tag = tags[k];
 
-        // an empty tag right before the next one: "<li><li>" gives end == InnerStart - 1, an empty body
-        tags[index].InnerEnd = end;
-        tags[index].End = end;
-        state.Open = false;
+            if (state.Key >= 0) openInList[state.Key]--;
+            else AdjustOpenCustomName(customNames, tag.CustomName, -1);
 
-        int prev = state.PrevOpen, next = state.NextOpen;
-        if (prev >= 0) states[prev].NextOpen = next;
-        if (next >= 0) states[next].PrevOpen = prev;
-        else lastOpen = prev;
+            // InnerEnd != 0: the tag an end tag has just been matched to
+            if (end >= 0 && !state.SelfClosed && tag.InnerEnd == 0)
+            {
+                // an empty tag right before the next one: "<li><li>" gives end == InnerStart - 1, an empty body
+                tag.InnerEnd = end;
+                tag.End = end;
+            }
+
+            k = state.PrevOpen;
+        }
+
+        lastOpen = k;
+    }
+
+    /// <summary>Counts an open tag with a custom name in (+1) or out (-1).</summary>
+    private static void AdjustOpenCustomName(Dictionary<string, int>? names, string? name, int delta)
+    {
+        if (names == null || string.IsNullOrEmpty(name)) return;
+
+        ref int open = ref CollectionsMarshal.GetValueRefOrNullRef(names, name);
+        if (!Unsafe.IsNullRef(ref open)) open += delta;
+    }
+
+    /// <summary>
+    /// For an end tag with a custom name: whether a tag with that name is open, and the name as the one string
+    /// instance the open tags hold (so that candidates are compared by reference).
+    /// </summary>
+    private static bool TryGetOpenCustomName(Dictionary<string, int>? names, ReadOnlySpan<char> name, out string? interned)
+    {
+        interned = null;
+        if (names == null) return false;
+
+        Span<char> lower = name.Length <= 128 ? stackalloc char[128] : new char[name.Length];
+        lower = lower.Slice(0, name.Length);
+        name.ToLowerInvariant(lower);
+
+        return names.GetAlternateLookup<ReadOnlySpan<char>>().TryGetValue(lower, out interned, out int open) && open > 0;
     }
 
     /// <summary>The stack position of the outermost target of <paramref name="rule"/> below the first stop tag, or -1.</summary>
@@ -520,7 +598,8 @@ internal static class ParsingCore
             Repair(ref st, misnested, tagStartPosition - 1);
         }
 
-        CloseInScope(rule, st.Tags, st.States, st.Stack, ref st.StackTop, null, ref st.OpenP, tagStartPosition - 2, ref st.LastOpen);
+        CloseInScope(rule, st.Tags, st.States, st.Stack, ref st.StackTop, null, ref st.OpenP, tagStartPosition - 2,
+            st.OpenInList, st.CustomNames, ref st.LastOpen);
     }
 
     /// <summary>
@@ -529,19 +608,21 @@ internal static class ParsingCore
     /// </summary>
     [MethodImpl(MethodImplOptions.NoInlining)] // rare: keeps the main loop small
     private static void CloseInScope(ImpliedEndRule rule, ParserTag[] tags, TagState[] states, int[] stack, ref int stackTop,
-        int[]? openByKey, ref int openP, int end, ref int lastOpen)
+        int[]? openByKey, ref int openP, int end, int[] openInList, Dictionary<string, int>? customNames, ref int lastOpen)
     {
         int from = ScopeStart(rule, states, stack, stackTop);
         if (from < 0) return;
 
+        int first = stack[from];
+
         while (stackTop > from)
         {
-            int index = stack[--stackTop];
-            int key = states[index].Key;
+            int key = states[stack[--stackTop]].Key;
             if (key == (int)HtmlTag.P) openP--;
             if (openByKey != null && key >= 0) openByKey[key]--;
-            CloseImplicitly(tags, states, index, end, ref lastOpen);
         }
+
+        TruncateOpenList(tags, states, first, end, openInList, customNames, ref lastOpen);
     }
 
     private sealed class ImpliedEndRule
@@ -728,7 +809,8 @@ internal static class ParsingCore
         return source.Length - 1;
     }
 
-    private static string InternLowerName(ReadOnlySpan<char> name, ref Dictionary<string, string>? cache)
+    /// <summary>The lower-case name as one string instance per document; the value counts the open tags with that name.</summary>
+    private static string InternLowerName(ReadOnlySpan<char> name, ref Dictionary<string, int>? cache)
     {
         if (name.IsEmpty) return string.Empty;
 
@@ -736,12 +818,12 @@ internal static class ParsingCore
         lower = lower.Slice(0, name.Length);
         name.ToLowerInvariant(lower);
 
-        cache ??= new Dictionary<string, string>(StringComparer.Ordinal);
+        cache ??= new Dictionary<string, int>(StringComparer.Ordinal);
         var lookup = cache.GetAlternateLookup<ReadOnlySpan<char>>();
-        if (!lookup.TryGetValue(lower, out var interned))
+        if (!lookup.TryGetValue(lower, out string? interned, out _))
         {
             interned = lower.ToString();
-            cache.Add(interned, interned);
+            cache.Add(interned, 0);
         }
 
         return interned;
@@ -756,9 +838,10 @@ internal static class ParsingCore
             return tagsource[..3];
         }
 
+        // The name ends at whitespace or '/': <br/> is "br", as <br /> is.
         var index = 0;
         var sourcelen = tagsource.Length;
-        while (index < sourcelen && !char.IsWhiteSpace(tagsource[index]))
+        while (index < sourcelen && !char.IsWhiteSpace(tagsource[index]) && tagsource[index] != '/')
         {
             index++;
         }

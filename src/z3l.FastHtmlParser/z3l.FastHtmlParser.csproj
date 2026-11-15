@@ -18,7 +18,7 @@
   <PropertyGroup>
     <PackageId>z3l.FastHtmlParser</PackageId>
     <Title>Fast HTML Parser</Title>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Authors>z3l</Authors>
     <Copyright>Copyright © 2026 z3l</Copyright>
     <Description>Fast, low-allocation HTML/XML parser for web scraping on .NET 9/10. About 10x (up to 30x) faster and 12–23x less memory than AngleSharp and HtmlAgilityPack in benchmarks. XPath 1.0 queries, zero-allocation tag/attribute matching, HTML5 entities, clean HTML to text extraction.</Description>
@@ -30,10 +30,19 @@
     <PackageProjectUrl>https://romanti3172.github.io/z3l.FastHtmlParser/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/romanti3172/z3l.FastHtmlParser</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>https://github.com/romanti3172/z3l.FastHtmlParser/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <!--
+      "dotnet pack" compares the public API with the last released package (downloaded from nuget.org)
+      and fails on a breaking change: a removed or changed public member, a dropped target framework.
+      After each release set the baseline to the version just released.
+    -->
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <PackageValidationBaselineVersion>1.2.0</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' or '$(TF_BUILD)' == 'true'">

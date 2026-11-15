@@ -173,12 +173,21 @@ The parser builds a flat list of tags, not a full DOM, and follows the HTML rule
 - Tags left open are ended by the end tag of an enclosing element (`<li>one<li>two</ul>`) or by the end of the document,
   so a truncated page keeps its text.
 - `<` starts a tag only before a letter, `/`, `!` or `?`: in `a < b` it is text. Stray end tags (`x</span>`) are not text.
-- Quoted attribute values may contain `<` and `>`.
+- Quoted attribute values may contain `<` and `>`, and text that looks like another attribute:
+  in `<a title="see id=5" id="real">` the id is `real`.
 - A document that starts with `<?xml` (RSS, Atom, sitemap, XHTML) is parsed by XML rules:
   an element is closed only by its end tag or `/>`, so an RSS `<link>` keeps its content.
 - Attribute values are returned decoded, as a browser reads them (`title="It&#39;s"` → `It's`), and `Is*` / `Find*`
   compare decoded values. `AttributeBody` returns the value exactly as written. Links (`AttributeHref`, `AttributeSrc`)
-  are not decoded, only resolved against the page URL with `&amp;`, `%3f`, `%3d` unescaped.
+  are decoded the same way (`&amp;` → `&`) and resolved against the page URL; percent-escapes are kept as written
+  (`%3F` in a path is not a `?`).
+- Nesting deeper than 512 levels is flattened, as in browsers: a deeper tag is found and has its text,
+  but it does not become the parent of the tags inside it.
+- Parsing time grows linearly with the size of the page on any markup, including thousands of unclosed tags
+  and stray end tags.
+
+A document does not have to be disposed: it holds no unmanaged resources. `Dispose()` releases the source text
+and the tag list early; after it the document and its tags throw `ObjectDisposedException`.
 
 On the test pages and on a set of broken-markup snippets (left-out end tags, stray end tags, truncated pages)
 the parser finds the same elements, texts, attribute values and parents as AngleSharp, apart from the trees

@@ -155,13 +155,90 @@ public sealed class TextTests
     }
 
     [TestMethod]
-    public void Links_AreNotDecoded_OnlyResolved()
+    public void Links_AreDecoded_AndResolved()
     {
-        var doc = new HtmlParser("<a href='/p?a=1&amp;b=2&#38;c=3'>x</a><img src='/i.png?w=1&amp;h=2'>", "https://example.com/");
+        var doc = new HtmlParser("<a href='/p?a=1&amp;b=2&#38;c=3&copy=4'>x</a><img src='/i.png?w=1&amp;h=2'>", "https://example.com/");
 
-        Assert.AreEqual("https://example.com/p?a=1&b=2&#38;c=3", doc.FindByName(HtmlTag.A).AttributeHref()); // only &amp;
+        // as a browser reads the attribute: every character reference, by the attribute rules ("&copy=" stays)
+        Assert.AreEqual("https://example.com/p?a=1&b=2&c=3&copy=4", doc.FindByName(HtmlTag.A).AttributeHref());
         Assert.AreEqual("https://example.com/i.png?w=1&h=2", doc.FindByName(HtmlTag.Img).AttributeSrc());
-        Assert.AreEqual("/p?a=1&b=2&c=3", doc.FindByName(HtmlTag.A).AttributeByName(HtmlAttribute.Href)); // the generic getter decodes
+        Assert.AreEqual("/p?a=1&b=2&c=3&copy=4", doc.FindByName(HtmlTag.A).AttributeByName(HtmlAttribute.Href)); // the same value, not resolved
+    }
+
+    [TestMethod]
+    public void Links_KeepPercentEscapes()
+    {
+        var doc = new HtmlParser(
+            "<a href='/files/what%3F.pdf'>a</a><a href='/r?u=https%3A%2F%2Fx.com%2Fp%3Fid%3D1'>b</a>",
+            "https://example.com/dir/page.html");
+        var links = doc.FindAllByName(HtmlTag.A).ToList();
+
+        // "%3F" is a '?' in a file name, not the start of the query
+        Assert.AreEqual("https://example.com/files/what%3F.pdf", links[0].AttributeHref());
+        Assert.AreEqual("https://example.com/r?u=https%3A%2F%2Fx.com%2Fp%3Fid%3D1", links[1].AttributeHref());
+        Assert.AreEqual("/files/what%3F.pdf", links[0].AttributeHref(""));
+    }
+
+    [TestMethod]
+    public void MailToAndTelephone_AreDecoded()
+    {
+        var doc = new HtmlParser("<a href='mailto:me&#64;example.com'>mail</a><a href=' tel:+1&#32;555&amp;1 '>call</a><a href='/page'>page</a>");
+        var links = doc.FindAllByName(HtmlTag.A).ToList();
+
+        Assert.AreEqual("me@example.com", links[0].AttributeHrefMailTo());
+        Assert.AreEqual("+1 555&1", links[1].AttributeHrefTelephone());
+        Assert.IsNull(links[2].AttributeHrefMailTo());
+        Assert.IsNull(links[0].AttributeHrefTelephone());
+    }
+
+    [TestMethod]
+    public void Attributes_AreNotTakenFromInsideOtherValues()
+    {
+        var doc = new HtmlParser(
+            "<a title=\"go id=5 now\" id=\"real\" data-x='x class=\"fake\"' class=\"true\" alt=\"see href=/evil\" href=\"/good\">x</a>");
+        var a = doc.Find(HtmlTag.A)!;
+
+        Assert.AreEqual("real", a.AttributeByName("id"));
+        Assert.AreEqual("true", a.AttributeByName(HtmlAttribute.Class));
+        Assert.AreEqual("/good", a.AttributeByName("href"));
+        Assert.AreEqual("/good", a.AttributeHref());
+        Assert.AreEqual("go id=5 now", a.AttributeTitle());
+
+        Assert.IsTrue(a.IsId("real"));
+        Assert.IsFalse(a.IsId("5"));
+        Assert.IsTrue(a.IsClass("true"));
+        Assert.IsFalse(a.IsClass("fake"));
+        Assert.AreSame(a, doc.Find(null, id: "real"));
+        Assert.IsNull(doc.Find(null, id: "5"));
+        Assert.IsNull(doc.Find(null, cls: "fake"));
+        Assert.AreEqual("real", doc.XPathValue("//a/@id")); // the same answer as XPath
+    }
+
+    [TestMethod]
+    public void Attributes_UnquotedValues_AndNoSpaceBetweenAttributes()
+    {
+        var doc = new HtmlParser("<a href=/p?a=1&b=2 class=x>1</a><a href=\"/q\"class=\"y\"id='z'>2</a><input disabled value=v CHECKED>");
+        var links = doc.FindAll(HtmlTag.A).ToList();
+        var input = doc.Find(HtmlTag.Input);
+
+        Assert.AreEqual("/p?a=1&b=2", links[0].AttributeByName("href")); // '=' is part of an unquoted value
+        Assert.IsTrue(links[0].IsClass("x"));
+        Assert.IsTrue(links[1].IsClass("y"));                             // right after the closing quote
+        Assert.AreEqual("z", links[1].AttributeId());
+        Assert.AreEqual("v", input.AttributeValue());
+        Assert.AreEqual("", input.AttributeByName("disabled"));           // no value
+        Assert.AreEqual("", input.AttributeByName("checked"));
+        Assert.AreEqual("", input.AttributeByName("missing"));
+    }
+
+    [TestMethod]
+    public void Comments_HaveNoAttributes()
+    {
+        var doc = new HtmlParser("<!-- <div id=\"main\" class=\"box\"> --><div id=\"main\" class=\"box\">x</div>");
+
+        Assert.AreEqual("div", doc.Find(null, id: "main")!.Name);
+        Assert.AreEqual("div", doc.Find(null, cls: "box")!.Name);
+        Assert.AreEqual("", doc.Find(HtmlTag.Comment).AttributeByName("id"));
     }
 
     [TestMethod]

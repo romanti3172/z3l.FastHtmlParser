@@ -11,15 +11,10 @@ public static class ParserTagNavigationExtensions
     /// <summary>The enclosing tag, or null for top-level tags.</summary>
     public static ParserTag? Parent(this ParserTag? tag)
     {
-        if (tag == null) return default;
+        if (tag == null || tag.ParentIndex < 0) return default;
 
-        var previous = tag.Previous();
-        while (previous != null && previous.Depth >= tag.Depth)
-        {
-            previous = previous.Previous();
-        }
-
-        return previous?.Depth + 1 == tag.Depth ? previous : default;
+        // recorded while parsing: no walk back over the previous siblings
+        return tag.Document.Data[tag.ParentIndex];
     }
 
     /// <summary>The nearest enclosing tag that matches <paramref name="query"/>.</summary>
@@ -127,9 +122,14 @@ public static class ParserTagNavigationExtensions
     {
         if (tag == null) return default;
 
+        // From the char after the tag: a tag ended by its parent or by the end of the document
+        // (an unfinished comment) may itself end with a '<' or with the last char of the source.
         var source = tag.Document.PageSource;
-        var next = source.IndexOf('<', tag.End);
-        return source.Substring(tag.End + 1, (next < 0 ? source.Length : next) - tag.End - 1);
+        var from = tag.End + 1;
+        if (from >= source.Length) return "";
+
+        var next = source.IndexOf('<', from);
+        return source.Substring(from, (next < 0 ? source.Length : next) - from);
     }
 
     /// <summary>Text between the end of this tag and the next '&lt;', whitespace collapsed and entities decoded.</summary>

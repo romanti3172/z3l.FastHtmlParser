@@ -12,10 +12,11 @@ public class ParserTag : IEnumerable<ParserTag>, ITagSearchable
     private readonly int _key; // (int)HtmlTag, or -1 for a name that is not in HtmlTag
     private readonly string? _customName;
 
-    internal ParserTag(HtmlParser document, int index, HtmlTag? tag, string? customName, int start, int end, int innerStart, int depth)
+    internal ParserTag(HtmlParser document, int index, int parentIndex, HtmlTag? tag, string? customName, int start, int end, int innerStart, int depth)
     {
         Document = document;
         Index = index;
+        ParentIndex = parentIndex;
         _key = tag is { } known ? (int)known : -1;
         _customName = customName;
         Start = start;
@@ -56,6 +57,9 @@ public class ParserTag : IEnumerable<ParserTag>, ITagSearchable
 
     /// <summary>Position in the document's tag list.</summary>
     internal int Index { get; }
+
+    /// <summary>Position of the enclosing tag in the document's tag list, or -1 for top-level tags.</summary>
+    internal int ParentIndex { get; }
 
     /// <summary>The tag as <see cref="HtmlTag"/>, or null for names not in the enum.</summary>
     internal HtmlTag? Tag => _key >= 0 ? (HtmlTag)_key : null;
