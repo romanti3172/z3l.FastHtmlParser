@@ -25,7 +25,7 @@ internal static class SpanHandlingCore
         var end = item.End;
         var innerStart = item.InnerStart;
 
-        var pageSource = item.Document.PageSource.AsSpan();
+        var pageSource = item.Document.Source;
         int length;
 
         if (innerStart > 0 && item.InnerEnd > 0)
@@ -56,7 +56,7 @@ internal static class SpanHandlingCore
         var start = item.Start;
         var end = item.End;
 
-        return item.Document.PageSource.AsSpan()
+        return item.Document.Source
             .Slice(start, end - start + 1)
             .Trim();
     }
@@ -73,7 +73,7 @@ internal static class SpanHandlingCore
             return default;
         }
 
-        return item.Document.PageSource.AsSpan()
+        return item.Document.Source
             .Slice(innerStart, innerEnd - innerStart + 1)
             .Trim();
     }
@@ -87,7 +87,7 @@ internal static class SpanHandlingCore
         // a comment has no attributes, whatever its text looks like
         if (tag == null || string.IsNullOrEmpty(attribute) || tag.Key == (int)HtmlTag.Comment) return default;
 
-        var source = tag.Document.PageSource.AsSpan();
+        var source = tag.Document.Source;
         int end = AttributeScanner.OpenTagEnd(tag, source.Length);
         var open = source.Slice(tag.Start, end - tag.Start); // "<name attributes", without the closing '>'
 

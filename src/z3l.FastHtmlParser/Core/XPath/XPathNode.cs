@@ -78,9 +78,9 @@ internal readonly struct XNode
         _ => Tag!.Start, // attribute: the children of its element follow it
     };
 
-    public ReadOnlySpan<char> AttributeName => Document.PageSource.AsSpan(Start, Length);
+    public ReadOnlySpan<char> AttributeName => Document.Source.Slice(Start, Length);
 
-    public ReadOnlySpan<char> AttributeRawValue => ValueStart < 0 ? default : Document.PageSource.AsSpan(ValueStart, ValueLength);
+    public ReadOnlySpan<char> AttributeRawValue => ValueStart < 0 ? default : Document.Source.Slice(ValueStart, ValueLength);
 }
 
 /// <summary>Scans the attributes of an opening tag, as name / value positions in the page source.</summary>
@@ -134,7 +134,7 @@ internal ref struct AttributeScanner
 
     public AttributeScanner(ParserTag tag)
     {
-        _source = tag.Document.PageSource;
+        _source = tag.Document.Source;
         _end = OpenTagEnd(tag, _source.Length);
 
         // skip '<' and the name
@@ -263,7 +263,7 @@ internal static class XNav
             end = int.MaxValue;
             childDepth = 0;
             textStart = 0;
-            textEnd = node.Document.PageSource.Length;
+            textEnd = node.Document.Source.Length;
             return true;
         }
 
@@ -375,7 +375,7 @@ internal static class XNav
 
         var tag = node.Tag!;
         var scanner = new AttributeScanner(tag);
-        var source = tag.Document.PageSource.AsSpan();
+        var source = tag.Document.Source;
         while (scanner.Next(out var ns, out var nl, out var vs, out var vl))
         {
             if (test.MatchesAttribute(source.Slice(ns, nl))) output.Add(XNode.Attribute(tag, ns, nl, vs, vl));
@@ -390,7 +390,7 @@ internal static class XNav
 
         var tag = node.Tag!;
         var scanner = new AttributeScanner(tag);
-        var source = tag.Document.PageSource.AsSpan();
+        var source = tag.Document.Source;
         while (scanner.Next(out var ns, out var nl, out var vs, out var vl))
         {
             if (source.Slice(ns, nl).Equals(name, StringComparison.OrdinalIgnoreCase))
@@ -411,7 +411,7 @@ internal static class XNav
         switch (node.Kind)
         {
             case XNodeKind.Root:
-                return HtmlToTextCore.ClearTags(node.Document.PageSource) ?? "";
+                return HtmlToTextCore.ClearTags(node.Document.Source) ?? "";
 
             case XNodeKind.Element:
                 return node.Tag!.Text() ?? "";
@@ -421,7 +421,7 @@ internal static class XNav
 
             case XNodeKind.Text:
             {
-                var text = node.Document.PageSource.AsSpan(node.Start, node.Length);
+                var text = node.Document.Source.Slice(node.Start, node.Length);
                 if (node.Tag is { } parent && ParsingCore.IsRawText(parent.Key)) return text.ToString();
                 return text.Contains('&') ? HtmlDecodeCore.HtmlDecode(text) : text.ToString();
             }
@@ -429,7 +429,7 @@ internal static class XNav
             default: // comment
             {
                 var tag = node.Tag!;
-                var source = tag.Document.PageSource.AsSpan(tag.Start, tag.End - tag.Start + 1);
+                var source = tag.Document.Source.Slice(tag.Start, tag.End - tag.Start + 1);
                 if (source.StartsWith("<!--")) source = source[4..];
                 if (source.EndsWith("-->")) source = source[..^3];
                 return source.ToString();

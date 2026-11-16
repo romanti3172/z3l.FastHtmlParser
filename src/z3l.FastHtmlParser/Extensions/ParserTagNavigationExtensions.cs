@@ -124,12 +124,13 @@ public static class ParserTagNavigationExtensions
 
         // From the char after the tag: a tag ended by its parent or by the end of the document
         // (an unfinished comment) may itself end with a '<' or with the last char of the source.
-        var source = tag.Document.PageSource;
+        var source = tag.Document.Source;
         var from = tag.End + 1;
         if (from >= source.Length) return "";
 
-        var next = source.IndexOf('<', from);
-        return source.Substring(from, (next < 0 ? source.Length : next) - from);
+        var rest = source[from..];
+        var next = rest.IndexOf('<');
+        return (next < 0 ? rest : rest[..next]).ToString();
     }
 
     /// <summary>Text between the end of this tag and the next '&lt;', whitespace collapsed and entities decoded.</summary>
@@ -149,6 +150,6 @@ public static class ParserTagNavigationExtensions
         var until = tag.Next(query);
         return until == null
             ? ""
-            : tag.Document.PageSource.Substring(tag.End + 1, until.Start - tag.End - 1);
+            : tag.Document.Source.Slice(tag.End + 1, until.Start - tag.End - 1).ToString();
     }
 }

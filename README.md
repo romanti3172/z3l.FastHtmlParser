@@ -14,6 +14,7 @@ Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 
 - **Text extraction.** `Text()` gives clean text; `TextLineBreaks()` keeps the visible line
   structure (`<br>`, `<p>`, `<li>`, `<div>`...).
 - **XPath 1.0.** `doc.XPath("//div[@class='card']/a")`, `doc.XPathValues("//a/@href")`, compiled and cached.
+- **CSS selectors.** `doc.Css("div.card > a[href^='/item']")`, `:nth-child()`, `:not()`, `:has()`, compiled and cached.
 - **Null-safe chains.** Every method accepts `null` and returns `null` / empty, so a chain never
   throws when something is missing.
 - **Thread-safe reads.** A parsed document is read-only; query it from any number of threads.
@@ -150,6 +151,52 @@ are decoded, and the string-value of an element is its `Text()` (whitespace coll
 `//name` and `[@attr='value']` run as a linear scan of the tag list with in-place attribute comparison.
 String expressions are compiled once and cached; an invalid expression throws `ArgumentException`
 with the position of the error.
+
+## CSS selectors
+
+`Css`, `CssFirst` and `IsCss` work as `querySelectorAll`, `querySelector` and `matches` in a browser.
+
+```csharp
+doc.Css("article.product_pod h3 > a");
+doc.CssFirst("ul#menu > li:last-child a")?.AttributeHref();
+doc.Css("table tr:nth-child(odd) > td:nth-child(2)");
+doc.Css("div.quote:has(a.tag[href*=love]) span.text");
+doc.Css("a[href$='.pdf' i]:not([rel~=nofollow])");
+doc.Css("h2:contains('Price') + p");                        // the visible text contains the string
+
+var list = doc.CssFirst("ul.menu");
+list.Css("> li");                                           // its children
+list.Css(":scope > li > a");
+link.IsCss("nav a.active");
+
+// compile once, reuse on any number of pages and threads
+static readonly CssQuery Prices = CssQuery.Compile("div.card span.price");
+page.Css(Prices);
+```
+
+Supported: type, `*`, `#id`, `.class`, attribute selectors (`[a]`, `=`, `~=`, `|=`, `^=`, `$=`, `*=`, with the `i` / `s`
+flags), the four combinators, selector lists, `:first-child`, `:last-child`, `:only-child`, the `-of-type` variants,
+`:nth-child(An+B [of S])`, `:nth-last-child()`, `:nth-of-type()`, `:nth-last-of-type()`, `:not()`, `:is()`, `:where()`,
+`:has()`, `:empty`, `:root`, `:scope`, `:link`, `:checked`, `:disabled`, `:enabled`, `:required`, `:optional`, and the
+non-standard `:contains()`. Ids, classes and attribute values are case-sensitive as in a standards-mode page, except
+the values HTML compares ignoring case (`type`, `rel`, `lang`, ...). Results are cross-checked against AngleSharp.
+A simple selector runs as fast as `FindAll`; `tag.Css("div a")` matches the whole selector against the document,
+as in a browser, and returns the tags inside `tag`.
+
+## Parsing from a buffer
+
+Text that is already in a `char[]` or a pooled buffer can be parsed in place, without copying it into a string.
+
+```csharp
+var doc = HtmlParser.Parse(chars.AsMemory(0, length), url);   // the buffer must not change while doc is used
+
+// hand a pooled buffer over: Dispose returns it to the pool
+var owner = MemoryPool<char>.Shared.Rent(maxChars);
+int length = reader.Read(owner.Memory.Span);
+using var page = HtmlParser.Parse(owner, length, url);
+```
+
+Everything works as with a string; `PageSource` makes the string on its first use.
 
 ## Text helpers for raw HTML
 
