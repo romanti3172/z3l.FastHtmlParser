@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.0 (2026-11-16)
+
+### Added
+
+- CSS selectors: `Css`, `CssFirst`, `IsCss` and compiled `CssQuery`, as `querySelectorAll`, `querySelector` and
+  `matches` in a browser. Selectors Level 3 plus `:is()`, `:where()`, `:has()`, `:not()` with lists,
+  `:nth-child(An+B of S)`, the `i` / `s` attribute flags, form and link pseudo-classes and the non-standard `:contains()`.
+  A selector may start with `>` for the children of the tag it is called on: `list.Css("> li")`.
+- `HtmlParser.Parse(ReadOnlyMemory<char>, url)`: parses text in a `char[]` or a part of a buffer in place, without
+  copying it into a string. `HtmlParser.Parse(IMemoryOwner<char>, length, url)` also takes ownership of a pooled buffer
+  and returns it on `Dispose()`. `PageSource` of such a document is made on its first use. The constructor is unchanged;
+  parsing and queries are as fast as before.
+
 ## 1.3.0 (2026-11-15)
 
 Fixes from a review of the parser on hostile and random markup. Parsing speed and memory use are unchanged;
