@@ -43,6 +43,10 @@ more**, the Licensee must purchase a Commercial License.
 The Commercial License grants the same rights as section 2, without the revenue and headcount
 limits.
 
+**One license for all z3l libraries.** The Commercial License is not limited to the Software: it
+also covers z3l.Scraper and every other library and package published by z3l, now or in the
+future, on the same terms. The Licensee pays USD 1,000 once and needs no other z3l license.
+
 ## 4. Conditions (both licenses)
 
 1. This license text and the copyright notice must be kept in all copies or substantial portions

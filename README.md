@@ -266,4 +266,5 @@ with AngleSharp and HtmlAgilityPack; see [benchmarks/README.md](benchmarks/READM
 Free for individuals and organizations with annual revenue **below USD 1,000,000** and
 **fewer than 100** employees, including commercial use. Organizations with annual revenue of
 USD 1,000,000 or more, or with 100 or more employees, need a commercial license: a **one-time payment of USD 1,000** per organization, perpetual, all versions.
+The same license covers every z3l library, z3l.Scraper included: you pay once.
 See [LICENSE.md](LICENSE.md) for the full terms and [pricing](https://romanti3172.github.io/z3l.FastHtmlParser/#pricing) to buy a commercial license.
