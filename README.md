@@ -15,6 +15,7 @@ Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 
   structure (`<br>`, `<p>`, `<li>`, `<div>`...).
 - **XPath 1.0.** `doc.XPath("//div[@class='card']/a")`, `doc.XPathValues("//a/@href")`, compiled and cached.
 - **CSS selectors.** `doc.Css("div.card > a[href^='/item']")`, `:nth-child()`, `:not()`, `:has()`, compiled and cached.
+- **Parse from buffers.** `HtmlParser.Parse(memory)` reads a `char[]` or a pooled buffer in place, without a copy.
 - **Null-safe chains.** Every method accepts `null` and returns `null` / empty, so a chain never
   throws when something is missing.
 - **Thread-safe reads.** A parsed document is read-only; query it from any number of threads.
@@ -234,7 +235,8 @@ The parser builds a flat list of tags, not a full DOM, and follows the HTML rule
   and stray end tags.
 
 A document does not have to be disposed: it holds no unmanaged resources. `Dispose()` releases the source text
-and the tag list early; after it the document and its tags throw `ObjectDisposedException`.
+and the tag list early (and returns a buffer handed over with `HtmlParser.Parse(owner, length)` to its pool);
+after it the document and its tags throw `ObjectDisposedException`.
 
 On the test pages and on a set of broken-markup snippets (left-out end tags, stray end tags, truncated pages)
 the parser finds the same elements, texts, attribute values and parents as AngleSharp, apart from the trees
@@ -248,7 +250,7 @@ dotnet run -c Release --project benchmarks/z3l.FastHtmlParser.Benchmarks -- --fi
 ```
 
 The tests run on saved pages of quotes.toscrape.com, books.toscrape.com and webscraper.io/test-sites
-and compare every page with AngleSharp. The benchmarks compare parsing and a complete scraping task
+and compare every page with AngleSharp, CSS selector results included. The benchmarks compare parsing and a complete scraping task
 with AngleSharp and HtmlAgilityPack; see [benchmarks/README.md](benchmarks/README.md).
 
 | books.toscrape.com, 51 KB: parse + extract 20 books | Mean | Allocated |
