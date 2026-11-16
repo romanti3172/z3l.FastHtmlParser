@@ -29,8 +29,9 @@ public class ScrapeBenchmarks
         _quotes = Corpus.Get(Corpus.Quotes);
 
         Same(Books_FastHtmlParser(), Books_AngleSharp(), Books_HtmlAgilityPack());
-        Same(Books_FastHtmlParser(), Books_FastHtmlParser_XPath(), Books_HtmlAgilityPack());
+        Same(Books_FastHtmlParser(), Books_FastHtmlParser_XPath(), Books_FastHtmlParser_Css());
         Same(Quotes_FastHtmlParser(), Quotes_AngleSharp(), Quotes_HtmlAgilityPack());
+        Same(Quotes_FastHtmlParser(), Quotes_FastHtmlParser_Css(), Quotes_AngleSharp());
     }
 
     private static void Same<T>(List<T> a, List<T> b, List<T> c)
@@ -75,6 +76,27 @@ public class ScrapeBenchmarks
                 pod.XPathValue(TitleXPath)!,
                 pod.XPathValue(PriceXPath)!,
                 LastWord(pod.XPathValue(RatingXPath)!)));
+        }
+        return result;
+    }
+
+    // the same CSS selectors as the AngleSharp version
+    private static readonly CssQuery PodsCss = CssQuery.Compile("article.product_pod");
+    private static readonly CssQuery TitleCss = CssQuery.Compile("h3 a");
+    private static readonly CssQuery PriceCss = CssQuery.Compile("p.price_color");
+    private static readonly CssQuery RatingCss = CssQuery.Compile("p.star-rating");
+
+    [Benchmark]
+    [BenchmarkCategory("Books")]
+    public List<Book> Books_FastHtmlParser_Css()
+    {
+        var result = new List<Book>(20);
+        foreach (var pod in new HtmlParser(_books).Css(PodsCss))
+        {
+            result.Add(new Book(
+                pod.CssFirst(TitleCss).AttributeByName(HtmlAttribute.Title),
+                pod.CssFirst(PriceCss).Text()!,
+                LastWord(pod.CssFirst(RatingCss).AttributeByName(HtmlAttribute.Class))));
         }
         return result;
     }
@@ -125,6 +147,26 @@ public class ScrapeBenchmarks
                 quote.FindByNameClass(HtmlTag.Span, "text").Text()!,
                 quote.FindByNameClass(HtmlTag.Small, "author").Text()!,
                 string.Join(",", quote.FindAllByNameClass(HtmlTag.A, "tag").Select(a => a.Text()))));
+        }
+        return result;
+    }
+
+    private static readonly CssQuery QuotesCss = CssQuery.Compile("div.quote");
+    private static readonly CssQuery TextCss = CssQuery.Compile("span.text");
+    private static readonly CssQuery AuthorCss = CssQuery.Compile("small.author");
+    private static readonly CssQuery TagCss = CssQuery.Compile("a.tag");
+
+    [Benchmark]
+    [BenchmarkCategory("Quotes")]
+    public List<Quote> Quotes_FastHtmlParser_Css()
+    {
+        var result = new List<Quote>(10);
+        foreach (var quote in new HtmlParser(_quotes).Css(QuotesCss))
+        {
+            result.Add(new Quote(
+                quote.CssFirst(TextCss).Text()!,
+                quote.CssFirst(AuthorCss).Text()!,
+                string.Join(",", quote.Css(TagCss).Select(a => a.Text()))));
         }
         return result;
     }

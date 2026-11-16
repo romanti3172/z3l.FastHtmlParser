@@ -43,7 +43,7 @@
 
     <div class="stats">
       <div class="stat"><b>10–30x</b><span>faster parsing</span></div>
-      <div class="stat"><b>13–23x</b><span>less memory</span></div>
+      <div class="stat"><b>12–23x</b><span>less memory</span></div>
       <div class="stat"><b>0</b><span>allocations to match tags</span></div>
       <div class="stat"><b>60 μs</b><span>to parse a 50 KB page</span></div>
     </div>
@@ -264,13 +264,13 @@
   // Benchmark results from benchmarks/README.md (time in μs, memory in KB).
   const BENCH = [
     { id: "scrape-books", tab: "Scrape 20 books", desc: "books.toscrape.com, 51 KB: parse and extract title, price, rating",
-      rows: [["z3l.FastHtmlParser", 71.4, 44.8], ["z3l.FastHtmlParser XPath", 109.1, 173.4], ["HtmlAgilityPack", 861.7, 1038.2], ["AngleSharp", 1160.4, 707.3]] },
+      rows: [["z3l.FastHtmlParser", 69.0, 44.8], ["z3l.FastHtmlParser CSS", 75.2, 45.2], ["z3l.FastHtmlParser XPath", 109.4, 173.4], ["HtmlAgilityPack", 760.4, 1038.2], ["AngleSharp", 1042.9, 707.3]] },
     { id: "parse-books", tab: "Parse 51 KB page", desc: "books.toscrape.com, 51 KB",
-      rows: [["z3l.FastHtmlParser", 62.9, 39.2], ["HtmlAgilityPack", 653.8, 812.4], ["AngleSharp", 1104.1, 663.4]] },
+      rows: [["z3l.FastHtmlParser", 58.6, 39.2], ["HtmlAgilityPack", 609.6, 812.4], ["AngleSharp", 958.4, 663.4]] },
     { id: "parse-large", tab: "Parse 510 KB page", desc: "books.toscrape.com x10, 510 KB",
-      rows: [["z3l.FastHtmlParser", 633.5, 391.1], ["AngleSharp", 13160.1, 6277.2], ["HtmlAgilityPack", 20705.9, 8062.5]] },
+      rows: [["z3l.FastHtmlParser", 609.8, 391.1], ["AngleSharp", 12201.6, 6276.9], ["HtmlAgilityPack", 19550.0, 8062.5]] },
     { id: "scrape-quotes", tab: "Scrape 10 quotes", desc: "quotes.toscrape.com, 11 KB: parse and extract text, author, tags",
-      rows: [["z3l.FastHtmlParser", 24.1, 18.4], ["HtmlAgilityPack", 257.0, 401.1], ["AngleSharp", 292.1, 228.4]] },
+      rows: [["z3l.FastHtmlParser", 23.5, 18.4], ["z3l.FastHtmlParser CSS", 25.7, 17.7], ["HtmlAgilityPack", 246.7, 401.1], ["AngleSharp", 267.0, 228.4]] },
   ];
 
   const fmtTime = us => us >= 1000 ? (us / 1000).toFixed(1) + " ms" : us.toFixed(1) + " μs";

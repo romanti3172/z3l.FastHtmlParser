@@ -255,9 +255,11 @@ with AngleSharp and HtmlAgilityPack; see [benchmarks/README.md](benchmarks/READM
 
 | books.toscrape.com, 51 KB: parse + extract 20 books | Mean | Allocated |
 |---|---:|---:|
-| **z3l.FastHtmlParser** | **71 μs** | **45 KB** |
-| HtmlAgilityPack | 862 μs (12x) | 1,038 KB (23x) |
-| AngleSharp | 1,160 μs (16x) | 707 KB (16x) |
+| **z3l.FastHtmlParser** | **69 μs** | **45 KB** |
+| z3l.FastHtmlParser, CSS selectors | 75 μs (1.1x) | 45 KB (1.0x) |
+| z3l.FastHtmlParser, XPath | 109 μs (1.6x) | 173 KB (3.9x) |
+| HtmlAgilityPack | 760 μs (11x) | 1,038 KB (23x) |
+| AngleSharp | 1,043 μs (15x) | 707 KB (16x) |
 
 ## License
 
