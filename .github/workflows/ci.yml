@@ -53,7 +53,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write   # nuget.org Trusted Publishing (OIDC), no stored API key
+      contents: write   # the GitHub release for the tag
     steps:
+      # Only CHANGELOG.md, for the release notes. Before the download: checkout cleans the folder.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+
       - uses: actions/download-artifact@v4
         with:
           name: nupkg
@@ -72,3 +79,29 @@ jobs:
 
       - name: Publish to nuget.org
         run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ steps.nuget_login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      # GitHub release for the tag: notes are the version's section of CHANGELOG.md
+      # ("## 1.4.0 (date)" up to the next "## "), the .nupkg is attached. A version with "-" is a prerelease.
+      # An existing release for the tag (a rerun) is left as it is.
+      - name: GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            echo "Release $GITHUB_REF_NAME already exists"
+            exit 0
+          fi
+          awk -v v="$VERSION" '/^## /{ if (found) exit; found = ($0 == "## " v || index($0, "## " v " ") == 1); next } found' \
+            CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "See [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/main/CHANGELOG.md)." > notes.md
+          fi
+          echo "" >> notes.md
+          echo "NuGet: https://www.nuget.org/packages/z3l.FastHtmlParser/$VERSION" >> notes.md
+          PRERELEASE=""
+          if [[ "$VERSION" == *-* ]]; then PRERELEASE="--prerelease"; fi
+          gh release create "$GITHUB_REF_NAME" artifacts/*.nupkg --verify-tag --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md $PRERELEASE
