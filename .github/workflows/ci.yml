@@ -14,11 +14,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             9.0.x
@@ -40,7 +40,7 @@ jobs:
           fi
           dotnet pack src/z3l.FastHtmlParser -c Release -o artifacts $VERSION_ARG
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: nupkg
           path: artifacts/*
@@ -56,17 +56,17 @@ jobs:
       contents: write   # the GitHub release for the tag
     steps:
       # Only CHANGELOG.md, for the release notes. Before the download: checkout cleans the folder.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: CHANGELOG.md
           sparse-checkout-cone-mode: false
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: nupkg
           path: artifacts
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
