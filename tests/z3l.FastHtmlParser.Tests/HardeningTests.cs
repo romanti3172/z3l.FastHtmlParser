@@ -182,18 +182,23 @@ public sealed class HardeningTests
         return "";
     }
 
-    public static IEnumerable<object[]> NestedForXPath =>
-    [
-        ["unclosed nesting", Repeat("<div><span>", Many / 2) + "<a href=\"/x\">link</a>"],
-        ["many links in deep nesting", Repeat("<span>", 1000) + Repeat("<a href=\"/x\">x</a>", Many)],
-        ["nested lists", Repeat("<div><ul><li><a href=\"/x\">x</a>", Many / 4)],
-    ];
+    // The pages are built in the test, not passed as test data: the test platform makes the name and id of a test
+    // from its arguments, and on Linux that took minutes for pages of several megabytes with quotes in them.
+    private static string NestedPage(string name) => name switch
+    {
+        "unclosed nesting" => Repeat("<div><span>", Many / 2) + "<a href=\"/x\">link</a>",
+        "many links in deep nesting" => Repeat("<span>", 1000) + Repeat("<a href=\"/x\">x</a>", Many),
+        "nested lists" => Repeat("<div><ul><li><a href=\"/x\">x</a>", Many / 4),
+        _ => throw new ArgumentOutOfRangeException(nameof(name)),
+    };
 
     [TestMethod]
-    [DynamicData(nameof(NestedForXPath))]
-    public void XPath_OnNestedNodes_IsLinear(string name, string html)
+    [DataRow("unclosed nesting")]
+    [DataRow("many links in deep nesting")]
+    [DataRow("nested lists")]
+    public void XPath_OnNestedNodes_IsLinear(string name)
     {
-        var doc = new HtmlParser(html);
+        var doc = new HtmlParser(NestedPage(name));
         var links = doc.FindAll(HtmlTag.A).ToList();
 
         // descendant and ancestor steps on nodes inside one another: minutes when every input node
