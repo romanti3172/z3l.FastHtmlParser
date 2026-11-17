@@ -20,7 +20,7 @@ public static class ParserTagExtensions
         // except in script, style, textarea, title, ...: their content is text as written.
         if (!tag.HasChildren() && (!body.Contains('<') || ParsingCore.IsRawText(tag.Key)))
         {
-            return body.Contains('&')
+            return HtmlDecodeCore.NeedsDecoding(body)
                 ? HtmlDecodeCore.HtmlDecode(body)
                 : body.ToString();
         }

@@ -64,7 +64,7 @@ public static class ParserTagMatchExtensions
         if (tag == null || string.IsNullOrEmpty(className)) return false;
 
         var rawClass = SpanHandlingCore.SpanAttributeByName(tag, HtmlAttribute.Class);
-        var classValue = rawClass.Contains('&') ? SpanHandlingCore.DecodeAttribute(rawClass).AsSpan() : rawClass;
+        var classValue = HtmlDecodeCore.NeedsDecoding(rawClass) ? SpanHandlingCore.DecodeAttribute(rawClass).AsSpan() : rawClass;
         if (classValue.IsEmpty) return false;
 
         var attrLen = classValue.Length;

@@ -154,11 +154,61 @@ public sealed class XPathTests
         }
     }
 
-    private static XmlDocument SystemXml()
+    private static XmlDocument SystemXml(string xhtml = Xhtml)
     {
         var xml = new XmlDocument { PreserveWhitespace = true };
-        xml.LoadXml(Xhtml);
+        xml.LoadXml(xhtml);
         return xml;
+    }
+
+    // Nested elements: a descendant or ancestor step runs on input nodes inside one another.
+    private const string NestedXhtml = """
+        <html id="html"><body id="body">
+        <div id="d1"><span id="s1" class="x">1</span>
+          <div id="d2"><span id="s2">2</span><a id="a1" href="/1">a</a>
+            <div id="d3" class="x"><span id="s3" class="x">3</span>
+              <div id="d4"><a id="a2" href="/2">b</a><span id="s4">4</span></div>
+            </div>
+            <a id="a3">c</a>
+          </div>
+          <span id="s5" class="x">5</span>
+        </div>
+        <div id="d5"><a id="a4" href="/4">d</a><!-- c --></div>
+        </body></html>
+        """;
+
+    [TestMethod]
+    [DataRow("//div//span")]
+    [DataRow("//div//a")]
+    [DataRow("//div//div//a")]
+    [DataRow("//div//span[@class='x']")]
+    [DataRow("//div/descendant::span")]
+    [DataRow("//div/descendant-or-self::div")]
+    [DataRow("//div/descendant-or-self::*[@class='x']")]
+    [DataRow("//div//span[1]")]
+    [DataRow("//div//span[last()]")]
+    [DataRow("//div/descendant::span[2]")]
+    [DataRow("//div[.//a]//span")]
+    [DataRow("//a/ancestor::div")]
+    [DataRow("//a/ancestor::*[@id]")]
+    [DataRow("//a/ancestor-or-self::*")]
+    [DataRow("//span/ancestor-or-self::div[@class='x']")]
+    [DataRow("//a/ancestor::div[1]")]
+    [DataRow("//a/ancestor::div[last()]")]
+    [DataRow("//span/ancestor::*[2]")]
+    [DataRow("(//a | //span)/ancestor::div")]
+    [DataRow("//*[@class='x']/ancestor::div")]
+    [DataRow("//div/ancestor-or-self::div")]
+    public void NestedInputNodes_SameAsSystemXml(string xpath)
+    {
+        var expected = SystemXml(NestedXhtml).SelectNodes(xpath)!
+            .Cast<XmlNode>()
+            .Select(n => n.Attributes!["id"]!.Value)
+            .ToArray();
+
+        var actual = new HtmlParser(NestedXhtml).XPath(xpath).Select(t => t.AttributeByName(HtmlAttribute.Id)).ToArray();
+
+        CollectionAssert.AreEqual(expected, actual, $"{xpath}: expected [{string.Join(", ", expected)}], got [{string.Join(", ", actual)}]");
     }
 
     // HTML specifics

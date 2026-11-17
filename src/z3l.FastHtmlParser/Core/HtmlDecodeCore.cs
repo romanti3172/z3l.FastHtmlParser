@@ -12,6 +12,33 @@ namespace z3l.FastHtmlParser.Core;
 /// </summary>
 internal static class HtmlDecodeCore
 {
+    /// <summary>
+    /// Whether a value read from the page differs from its source: it has a character reference to decode,
+    /// or a CR (HTML reads CR LF and a lone CR as LF).
+    /// </summary>
+    public static bool NeedsDecoding(ReadOnlySpan<char> value) => value.IndexOfAny('&', '\r') >= 0;
+
+    /// <summary>HTML input stream preprocessing: CR LF and a lone CR become LF.</summary>
+    public static string NormalizeNewlines(ReadOnlySpan<char> value)
+    {
+        if (!value.Contains('\r')) return value.ToString();
+
+        var result = new StringBuilder(value.Length);
+        for (int i = 0; i < value.Length; i++)
+        {
+            char c = value[i];
+            if (c != '\r')
+            {
+                result.Append(c);
+                continue;
+            }
+
+            result.Append('\n');
+            if (i + 1 < value.Length && value[i + 1] == '\n') i++;
+        }
+        return result.ToString();
+    }
+
     /// <param name="input">Text to decode.</param>
     /// <param name="inAttribute">
     /// Attribute-value rules: a legacy name without ';' followed by '=' or an alphanumeric
@@ -19,6 +46,9 @@ internal static class HtmlDecodeCore
     /// </param>
     public static string HtmlDecode(ReadOnlySpan<char> input, bool inAttribute = false)
     {
+        // Line breaks first, as a browser reads the page; a CR written as "&#13;" is decoded after that and stays.
+        if (input.Contains('\r')) return HtmlDecode(NormalizeNewlines(input), inAttribute);
+
         int amp = input.IndexOf('&');
         if (amp < 0)
         {
