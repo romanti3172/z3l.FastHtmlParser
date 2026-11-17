@@ -2,8 +2,11 @@
 
 Copyright © 2026 z3l. All rights reserved.
 
-This license applies to the z3l.FastHtmlParser library, its source code, binaries and
-NuGet packages (the "Software").
+This license applies to the z3l.FastHtmlParser library and to its ports to other languages:
+the Go module github.com/romanti3172/fasthtmlparser, the Rust crate fasthtmlparser, the
+JavaScript / TypeScript package z3l-fasthtmlparser and the Python package fasthtmlparser.
+It covers their source code, binaries and the packages published on NuGet, the Go module
+proxy, crates.io, npm and PyPI (together, the "Software").
 
 ## 1. Definitions
 
