@@ -234,7 +234,7 @@ internal static class CssMatcher
     }
 
     /// <summary>The decoded value: the raw span when there is nothing to decode.</summary>
-    public static ReadOnlySpan<char> Decoded(ReadOnlySpan<char> raw) => raw.Contains('&') ? SpanHandlingCore.DecodeAttribute(raw) : raw;
+    public static ReadOnlySpan<char> Decoded(ReadOnlySpan<char> raw) => HtmlDecodeCore.NeedsDecoding(raw) ? SpanHandlingCore.DecodeAttribute(raw) : raw;
 }
 
 /// <summary>One simple selector of a compound: <c>#id</c>, <c>.class</c>, <c>[attr]</c>, <c>:pseudo</c>.</summary>

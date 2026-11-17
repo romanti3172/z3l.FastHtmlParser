@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- XPath steps on nodes inside one another are linear: `//div//span//a` on nested or unclosed markup, and
+  `//a/ancestor::*` on many links in one list, collected every node once per input node and removed the duplicates
+  afterwards. 20,000 nested tags took 16 s and gigabytes of memory; now 3 ms. Results are unchanged.
+- Line breaks in values are read as a browser reads them: CR LF and a lone CR are LF in attribute values
+  (`AttributeByName`, `IsClass`, `IsAttribute`, CSS and XPath attribute tests), in the text of `textarea`, `pre`, `script`
+  and other tags without child tags, and in XPath text nodes. Pages saved on Windows gave values with `\r`.
+  A CR written as `&#13;` stays; `Body()`, `FullSource()` and `AttributeBody()` still return the source as written,
+  and `HtmlText.Decode` now also turns CR LF into LF.
+
 ## 1.4.0 (2026-11-16)
 
 ### Added

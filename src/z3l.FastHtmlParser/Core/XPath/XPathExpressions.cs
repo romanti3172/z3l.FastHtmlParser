@@ -408,6 +408,27 @@ internal sealed class Step(Axis axis, NodeTest test, Expr[] predicates)
             return result;
         }
 
+        // Nested input nodes (//div//a on divs inside divs, //a/ancestor::* on links in one list) give the same nodes
+        // again and again: n nested nodes collected about n² nodes before the duplicates were removed. When the
+        // predicates do not depend on the position, a node passes them or not whichever input node it comes from,
+        // so the input nodes whose results are already collected are skipped: the work stays linear.
+        if (!HasPositionalPredicates)
+        {
+            if (Axis is Axis.Descendant or Axis.DescendantOrSelf && !Test.MatchesText && IsInDocumentOrder(input))
+            {
+                SelectDescendantsOfNested(input, result, state);
+                XValue.SortUnique(result);
+                return result;
+            }
+
+            if (Axis is Axis.Ancestor or Axis.AncestorOrSelf)
+            {
+                SelectSharedAncestors(input, result, state);
+                XValue.SortUnique(result);
+                return result;
+            }
+        }
+
         var buffer = new List<XNode>();
         foreach (var node in input)
         {
@@ -418,6 +439,84 @@ internal sealed class Step(Axis axis, NodeTest test, Expr[] predicates)
 
         XValue.SortUnique(result);
         return result;
+    }
+
+    private static bool IsInDocumentOrder(List<XNode> nodes)
+    {
+        for (int i = 1; i < nodes.Count; i++)
+        {
+            if (nodes[i - 1].Key >= nodes[i].Key) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The descendant axes (tags only) on input nodes in document order: a tag that lies in the part of the tag list
+    /// already scanned for an earlier input node is skipped, because that scan has tested it and every tag
+    /// its own scan would test.
+    /// </summary>
+    private void SelectDescendantsOfNested(List<XNode> input, List<XNode> output, EvalState state)
+    {
+        var data = state.Document.Data;
+        int scannedTo = -1; // the tags before this index were scanned for an earlier input node
+
+        foreach (var node in input)
+        {
+            if (node.Kind is XNodeKind.Element or XNodeKind.Comment)
+            {
+                var tag = node.Tag!;
+                if (tag.Index < scannedTo) continue;
+
+                Select(node, output, state);
+
+                // where XNav.AddDescendants stops for this tag
+                if (node.Kind == XNodeKind.Element && tag.InnerStart > 0 && tag.InnerEnd > 0)
+                {
+                    int i = tag.Index + 1;
+                    while (i < data.Count && data[i].End <= tag.End) i++;
+                    scannedTo = Math.Max(scannedTo, i);
+                }
+            }
+            else
+            {
+                Select(node, output, state);
+                if (node.Kind == XNodeKind.Root) scannedTo = int.MaxValue;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The ancestor axes: the walk up from an input node stops at an ancestor already reached from an earlier one,
+    /// because that walk has gone on to the root. Only the root and elements are marked: they are the only parents.
+    /// </summary>
+    private void SelectSharedAncestors(List<XNode> input, List<XNode> output, EvalState state)
+    {
+        var visited = new HashSet<long>();
+
+        foreach (var node in input)
+        {
+            var start = output.Count;
+            var current = node;
+
+            if (Axis == Axis.AncestorOrSelf)
+            {
+                if (current.Kind is XNodeKind.Root or XNodeKind.Element && !visited.Add(current.Key)) continue;
+                if (Test.Matches(current, attributeAxis: false)) output.Add(current);
+            }
+
+            while (XNav.TryGetParent(current, out current) && visited.Add(current.Key))
+            {
+                if (Test.Matches(current, attributeAxis: false)) output.Add(current);
+            }
+
+            if (Predicates.Length > 0 && output.Count > start)
+            {
+                var selected = output.GetRange(start, output.Count - start);
+                Predicate.Filter(selected, Predicates, state);
+                output.RemoveRange(start, output.Count - start);
+                output.AddRange(selected);
+            }
+        }
     }
 
     /// <summary>The nodes of the axis that pass the test and the predicates, in document order.</summary>

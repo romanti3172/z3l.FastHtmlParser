@@ -333,6 +333,25 @@ public sealed class ParserBehaviorTests
     }
 
     [TestMethod]
+    public void LineBreaks_AreReadAsInABrowser()
+    {
+        // CR LF and a lone CR are LF in values, as a browser reads the page (a page saved on Windows);
+        // a CR written as a character reference stays.
+        var doc = new HtmlParser("<meta name=\"d\" content=\"one\r\ntwo\rthree&#13;four\">" +
+                                 "<textarea>a\r\nb</textarea><pre>c\r\nd</pre><div class=\"x\r\ny\">t</div>");
+
+        Assert.AreEqual("one\ntwo\nthree\rfour", doc.Find(HtmlTag.Meta).AttributeByName(HtmlAttribute.Content));
+        Assert.AreEqual("a\nb", doc.Find(HtmlTag.Textarea).Text());
+        Assert.AreEqual("c\nd", doc.Find(HtmlTag.Pre).Text());
+        Assert.AreEqual("a\nb", doc.XPathValue("//textarea/text()"));
+        Assert.AreEqual("one\ntwo\nthree\rfour", doc.XPathValue("//meta/@content"));
+        Assert.IsTrue(doc.Find(HtmlTag.Div).IsClass("y"));
+        Assert.IsTrue(doc.Find(HtmlTag.Div).IsAttribute(HtmlAttribute.Class, "x\ny"));
+        Assert.HasCount(1, doc.Css("div[class=\"x\\a y\"]"));
+        Assert.AreEqual("x\r\ny", doc.Find(HtmlTag.Div).AttributeBody(HtmlAttribute.Class)); // the source as written
+    }
+
+    [TestMethod]
     public void ParallelReads_GiveTheSameResults()
     {
         var doc = Fixtures.Load("books/index.html");

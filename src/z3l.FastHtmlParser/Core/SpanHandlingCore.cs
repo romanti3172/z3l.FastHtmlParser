@@ -221,7 +221,7 @@ internal static class SpanHandlingCore
     /// <summary>Compares the decoded value; no allocation unless the raw value contains '&amp;'.</summary>
     internal static bool AttributeEquals(ReadOnlySpan<char> raw, string? value)
     {
-        return raw.Contains('&')
+        return HtmlDecodeCore.NeedsDecoding(raw)
             ? string.Equals(DecodeAttribute(raw), value, StringComparison.Ordinal)
             : MemoryExtensions.Equals(raw, value, StringComparison.Ordinal);
     }
@@ -229,7 +229,7 @@ internal static class SpanHandlingCore
     /// <summary>Whether the decoded value starts with <paramref name="value"/>; no allocation unless the raw value contains '&amp;'.</summary>
     internal static bool AttributeStartsWith(ReadOnlySpan<char> raw, string value)
     {
-        return raw.Contains('&')
+        return HtmlDecodeCore.NeedsDecoding(raw)
             ? DecodeAttribute(raw).StartsWith(value, StringComparison.Ordinal)
             : raw.StartsWith(value, StringComparison.Ordinal);
     }

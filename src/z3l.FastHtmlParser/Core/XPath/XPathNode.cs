@@ -422,8 +422,8 @@ internal static class XNav
             case XNodeKind.Text:
             {
                 var text = node.Document.Source.Slice(node.Start, node.Length);
-                if (node.Tag is { } parent && ParsingCore.IsRawText(parent.Key)) return text.ToString();
-                return text.Contains('&') ? HtmlDecodeCore.HtmlDecode(text) : text.ToString();
+                if (node.Tag is { } parent && ParsingCore.IsRawText(parent.Key)) return HtmlDecodeCore.NormalizeNewlines(text);
+                return HtmlDecodeCore.HtmlDecode(text);
             }
 
             default: // comment

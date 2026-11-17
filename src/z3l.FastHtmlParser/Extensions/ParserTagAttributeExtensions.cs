@@ -79,7 +79,7 @@ public static class ParserTagAttributeExtensions
     private static ReadOnlySpan<char> DecodedHref(ParserTag? tag)
     {
         var raw = SpanHandlingCore.SpanAttributeByName(tag, HtmlAttribute.Href);
-        return raw.Contains('&') ? SpanHandlingCore.DecodeAttribute(raw) : raw;
+        return HtmlDecodeCore.NeedsDecoding(raw) ? SpanHandlingCore.DecodeAttribute(raw) : raw;
     }
 
     /// <summary>The number from a tel: href (character references decoded, as <see cref="AttributeHref"/>), or null.</summary>

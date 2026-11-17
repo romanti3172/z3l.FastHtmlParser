@@ -182,6 +182,42 @@ public sealed class HardeningTests
         return "";
     }
 
+    public static IEnumerable<object[]> NestedForXPath =>
+    [
+        ["unclosed nesting", Repeat("<div><span>", Many / 2) + "<a href=\"/x\">link</a>"],
+        ["many links in deep nesting", Repeat("<span>", 1000) + Repeat("<a href=\"/x\">x</a>", Many)],
+        ["nested lists", Repeat("<div><ul><li><a href=\"/x\">x</a>", Many / 4)],
+    ];
+
+    [TestMethod]
+    [DynamicData(nameof(NestedForXPath))]
+    public void XPath_OnNestedNodes_IsLinear(string name, string html)
+    {
+        var doc = new HtmlParser(html);
+        var links = doc.FindAll(HtmlTag.A).ToList();
+
+        // descendant and ancestor steps on nodes inside one another: minutes when every input node
+        // collects all its descendants or ancestors again
+        var querying = Task.Run(() => (
+            Descendants: doc.XPath("//*//*//a").Count,
+            InDiv: doc.XPath("//div//a[@href]").Count,
+            Ancestors: doc.XPathValue("count(//a/ancestor::*)"),
+            Self: doc.XPath("//a/ancestor-or-self::*[@href]").Count));
+        if (!querying.Wait(TimeSpan.FromSeconds(20))) Assert.Fail($"XPath on {name} took more than 20 s");
+        var result = querying.Result;
+
+        var ancestors = new HashSet<ParserTag>(ReferenceEqualityComparer.Instance);
+        foreach (var link in links)
+        {
+            for (var parent = link.Parent(); parent != null && ancestors.Add(parent); parent = parent.Parent()) { }
+        }
+
+        Assert.AreEqual(links.Count(a => a.Depth >= 2), result.Descendants, name);
+        Assert.AreEqual(links.Count(a => a.Parent(HtmlTag.Div) != null), result.InDiv, name);
+        Assert.AreEqual(ancestors.Count.ToString(), result.Ancestors, name);
+        Assert.AreEqual(links.Count, result.Self, name);
+    }
+
     /// <summary>Document order, positions inside the source, and a parent that encloses the tag one level up.</summary>
     private static void AssertConsistent(HtmlParser doc, string html, string name)
     {
