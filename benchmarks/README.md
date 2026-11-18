@@ -74,3 +74,19 @@ z3l.FastHtmlParser does less than a full DOM parser: it does not build a tree wi
 and texts. For extracting data from pages, the results are the same: on the test pages and on a set of broken-markup
 snippets it finds the same elements, texts, attribute values and parents as AngleSharp (see `AngleSharpCrossCheckTests`),
 and CSS selectors select the same elements (see `CssTests`).
+
+## JIT, NativeAOT and server GC
+
+`--runtime-variants` runs each benchmark four times: JIT and NativeAOT, each with workstation and server GC.
+
+```
+dotnet run -c Release --project benchmarks/z3l.FastHtmlParser.Benchmarks -- --runtime-variants --filter '*ParseBenchmarks.FastHtmlParser' '*ScrapeBenchmarks.*_FastHtmlParser*'
+```
+
+NativeAOT needs the platform linker: on Linux `clang` and `zlib1g-dev`; on Windows the Visual Studio C++ build tools,
+with `C:\Program Files (x86)\Microsoft Visual Studio\Installer` (where `vswhere.exe` lives) on `PATH`.
+BenchmarkDotNet compiles NativeAOT for the instruction set of the machine it runs on, as the JIT does.
+
+On an AMD Ryzen 7 3800X (.NET 10.0.12) NativeAOT was 20–50% slower than the JIT on every benchmark, on Linux and on
+Windows, and server GC 2–15% slower than workstation GC (up to 24% on XPath, which allocates the most): the JIT's dynamic
+PGO matters more here than ahead-of-time compilation, and a single-threaded parser gains nothing from server GC.
