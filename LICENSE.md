@@ -2,11 +2,23 @@
 
 Copyright © 2026 z3l. All rights reserved.
 
-This license applies to the z3l.FastHtmlParser library and to its ports to other languages:
-the Go module github.com/romanti3172/fasthtmlparser, the Rust crate fasthtmlparser, the
-JavaScript / TypeScript package z3l-fasthtmlparser and the Python package fasthtmlparser.
-It covers their source code, binaries and the packages published on NuGet, the Go module
-proxy, crates.io, npm and PyPI (together, the "Software").
+This license applies to the z3l.FastHtmlParser library and to every port of it to another language
+published by z3l, including:
+
+- C#: the NuGet package z3l.FastHtmlParser (github.com/romanti3172/z3l.FastHtmlParser);
+- Go: the module github.com/romanti3172/fasthtmlparser;
+- Rust: the crate fasthtmlparser (github.com/romanti3172/fasthtmlparser-rs);
+- Java: io.github.romanti3172:fasthtmlparser (github.com/romanti3172/fasthtmlparser-java);
+- JavaScript / TypeScript: the npm package z3l-fasthtmlparser (github.com/romanti3172/fasthtmlparser-js);
+- Python: the packages fasthtmlparser (github.com/romanti3172/fasthtmlparser-py) and
+  fasthtmlparser-pure (github.com/romanti3172/fasthtmlparser-pure);
+- PHP: the Composer package z3l/fasthtmlparser (github.com/romanti3172/fasthtmlparser-php);
+- Ruby: the gem fasthtmlparser (github.com/romanti3172/fasthtmlparser-rb);
+- C: github.com/romanti3172/fasthtmlparser-c;
+- C++: github.com/romanti3172/fasthtmlparser-cpp.
+
+It covers their source code, binaries and the packages built from them on any package registry
+(together, the "Software").
 
 ## 1. Definitions
 
