@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The package that is found by "html to markdown". The converter is a part of z3l.FastHtmlParser (it reads the tags
+    as the parser recorded them); this assembly has one class that calls it, and the package depends on
+    z3l.FastHtmlParser of the same version.
+    Keep it to that class: the two packages are used together, and a second type or an extension method here
+    could get the name of one in the parser.
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>z3l.FastHtmlParser.HtmlToMarkdown</AssemblyName>
+    <!-- The class is in the namespace of the parser: one "using" for both packages, and its full name is the package name. -->
+    <RootNamespace>z3l.FastHtmlParser</RootNamespace>
+
+    <!-- Turns on the trimming / Native AOT analyzers; no effect on the produced code. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- NuGet package. The version is in ..\Directory.Build.props: one for this package and z3l.FastHtmlParser. -->
+  <PropertyGroup>
+    <PackageId>z3l.FastHtmlParser.HtmlToMarkdown</PackageId>
+    <Title>Fast HTML to Markdown</Title>
+    <Authors>z3l</Authors>
+    <Copyright>Copyright © 2026 z3l</Copyright>
+    <Description>Fast HTML to Markdown converter for .NET 9/10, built on z3l.FastHtmlParser: 10–20x faster than ReverseMarkdown and Html2Markdown on typical pages, with 37–62x less memory. Headings, nested lists, links and images (absolute with a page URL), GitHub tables with colspan and rowspan, code blocks with their language, task lists, quotes. Text is escaped only where Markdown needs it; linear time on any markup.</Description>
+    <PackageTags>markdown;html-to-markdown;htmltomarkdown;html2markdown;html-to-md;html2md;html;converter;markdown-converter;commonmark;gfm;llm;rag;scraping;web-scraping;fast;low-allocation;performance;dotnet;csharp;net9;net10;aot;fasthtmlparser;reversemarkdown-alternative;html2markdown-alternative</PackageTags>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageProjectUrl>https://htmltomarkdown.fasthtmlparser.com/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/romanti3172/z3l.FastHtmlParser</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>https://github.com/romanti3172/z3l.FastHtmlParser/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <!--
+      As in the parser: "dotnet pack" checks the package, and with a baseline compares the public API with
+      the last release. There is no release yet: after the first one set PackageValidationBaselineVersion to its version.
+    -->
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' or '$(TF_BUILD)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE.md" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- In the package this is the dependency on z3l.FastHtmlParser, not lower than this version. -->
+  <ItemGroup>
+    <ProjectReference Include="..\z3l.FastHtmlParser\z3l.FastHtmlParser.csproj" />
+  </ItemGroup>
+
+</Project>

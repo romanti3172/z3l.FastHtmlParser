@@ -13,6 +13,8 @@ Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 
   decoded the way browsers do.
 - **Text extraction.** `Text()` gives clean text; `TextLineBreaks()` keeps the visible line
   structure (`<br>`, `<p>`, `<li>`, `<div>`...).
+- **HTML to Markdown.** `Markdown()` gives a page or any tag as Markdown: headings, lists, links, tables,
+  code blocks. 10–20x faster than ReverseMarkdown and Html2Markdown on typical pages, with 37–62x less memory.
 - **XPath 1.0.** `doc.XPath("//div[@class='card']/a")`, `doc.XPathValues("//a/@href")`, compiled and cached.
 - **CSS selectors.** `doc.Css("div.card > a[href^='/item']")`, `:nth-child()`, `:not()`, `:has()`, compiled and cached.
 - **Forms.** `form.Fields()` gives the fields a browser would send (hidden `__VIEWSTATE`, checked boxes, selected options),
@@ -210,6 +212,60 @@ the values HTML compares ignoring case (`type`, `rel`, `lang`, ...). Results are
 A simple selector runs as fast as `FindAll`; `tag.Css("div a")` matches the whole selector against the document,
 as in a browser, and returns the tags inside `tag`.
 
+## Markdown
+
+`Markdown()` gives a page, or any part of it, as Markdown: for a language model, a search index, a note to keep.
+
+```csharp
+var doc = new HtmlParser(html, "https://example.com/blog/post");
+
+string page = doc.Markdown();                                // the whole page
+string? article = doc.Find(HtmlTag.Article).Markdown();      // one part of it
+string? specs = doc.CssFirst("table.specs").Markdown();      // "| Name | Value |\n| --- | --- |\n| ..."
+
+// only the text and its structure: less to read for a language model
+string? text = doc.Find(HtmlTag.Main).Markdown(new MarkdownOptions { Links = false, Images = false });
+
+HtmlText.ToMarkdown("<h2>Title</h2><p>Some <b>bold</b> text</p>");   // "## Title\n\nSome **bold** text"
+```
+
+- Headings, paragraphs, line breaks, emphasis, strikethrough, quotes, rules, nested lists (numbered from their `start`,
+  task lists with checkboxes), definition lists, code spans, code blocks with their language (`class="language-…"`),
+  links and images with their titles.
+- A table of data becomes a GitHub table: `colspan` and `rowspan` keep the columns in place, and a table without
+  a heading row gets an empty one. A table that only lays out a page (a table inside it, a single column,
+  `role="presentation"`) is written as the blocks in its cells.
+- Only what a browser shows: `head`, `script`, `style`, `noscript`, `template`, comments, `svg` and form controls
+  are left out.
+- Links and images are absolute when the document has a page URL, the same addresses as `AttributeHref()` gives.
+  An image that a script loads on scroll is taken from `data-src`; a link without an address or with a script
+  is written as its text.
+- Text gets a backslash only where Markdown would read it as its own: `snake_case`, `2 * 3`, `[1]` and `AT&T` stay as
+  they are; `*text*`, or a line that starts with `#`, `-` or `1.`, is escaped.
+- The Markdown renders as the page reads. Emphasis that Markdown would not take for emphasis (`**Note:**text`,
+  `文**「字」**文`) gets an empty comment next to it, two lists in a row get different markers, a link around
+  several blocks becomes a link in each of them.
+- One pass over the parsed tags, no object per tag, linear time on any markup. Lines end with LF; the result has
+  no line break at its start or end.
+
+On every test page the Markdown, rendered back to HTML by Markdig, has the same text, links, images, headings
+and list items as the page itself (`MarkdownCrossCheckTests`).
+
+| books.toscrape.com, 51 KB: HTML → Markdown | Mean | Allocated |
+|---|---:|---:|
+| **z3l.FastHtmlParser** | **114 μs** | **39 KB** |
+| Html2Markdown | 1,751 μs (15x) | 1,627 KB (42x) |
+| ReverseMarkdown | 2,195 μs (19x) | 2,240 KB (58x) |
+| html-to-markdown (a Rust library, through its .NET binding) | 3,675 μs (32x) | 122 KB (3x) |
+
+All four pages and what is compared: [benchmarks/README.md](benchmarks/README.md#convert-a-page-to-markdown).
+
+The package [z3l.FastHtmlParser.HtmlToMarkdown](https://www.nuget.org/packages/z3l.FastHtmlParser.HtmlToMarkdown)
+is for those who look for an HTML to Markdown converter: this library with one more method,
+`HtmlToMarkdown.Convert(html, "https://example.com/blog/post")`, which never returns null.
+With z3l.FastHtmlParser installed you do not need it; the two can be installed together.
+Try the converter on any page: https://htmltomarkdown.fasthtmlparser.com
+
 ## Parsing from a buffer
 
 Text that is already in a `char[]` or a pooled buffer can be parsed in place, without copying it into a string.
@@ -231,6 +287,7 @@ Everything works as with a string; `PageSource` makes the string on its first us
 HtmlText.Decode("Q&amp;A &copy; 2026");            // "Q&A © 2026"
 HtmlText.ToText("<b>Hello</b>   world");           // "Hello world"
 HtmlText.ToTextWithLineBreaks("<p>One</p><p>Two</p>");
+HtmlText.ToMarkdown("<p>One <a href=\"/two\">two</a></p>");   // "One [two](/two)"
 ```
 
 ## Parsing rules
@@ -242,6 +299,7 @@ The parser builds a flat list of tags, not a full DOM, and follows the HTML rule
 - Void elements (`img`, `br`, `meta`, `link`, `input`, `hr`, ...) and `<!doctype>` never contain other tags.
 - `Text()`, `IsText` and `TextLineBreaks()` return the visible text: comments and the content of `script`, `style`,
   `noscript`, `template`, `noframes`, `noembed` are skipped (`Text()` of a `<script>` itself still gives its code).
+  `Markdown()` also leaves out `head`, `svg` and form controls.
 - Optional end tags work as in HTML5: a new `<li>` ends an open `<li>`, `<td>`/`<tr>` end open cells and rows,
   `<dt>`/`<dd>` and `<option>` end their open siblings, a block element (`<div>`, `<ul>`, `<table>`, ...) ends an open `<p>`.
 - Tags left open are ended by the end tag of an enclosing element (`<li>one<li>two</ul>`) or by the end of the document,

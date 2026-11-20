@@ -22,3 +22,9 @@ so the tests do not depend on the network or on changes of the sites.
 
 The expected values in the tests were taken from the raw HTML, not from the parser's own output.
 `AngleSharpCrossCheckTests` additionally compares every page with AngleSharp (a browser-grade parser).
+
+Next to every page is its Markdown (`quotes/page1.md`, ...): what `Markdown()` gives for the page with the URL
+of the table above. `MarkdownCrossCheckTests.Page_GivesTheSavedMarkdown` compares the two, so a change of the
+output shows up as a diff of these files; `FHP_UPDATE_MARKDOWN=1 dotnet test` writes them anew.
+`MarkdownCrossCheckTests.Page_RendersBackToTheSameContent` checks the Markdown itself: rendered back to HTML
+by Markdig, it has the text, links, images, headings and list items of the page.

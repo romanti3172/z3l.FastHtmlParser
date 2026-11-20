@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- HTML to Markdown: `doc.Markdown()`, `tag.Markdown()` and `HtmlText.ToMarkdown(html)` give a page or any part of it
+  as Markdown (CommonMark with the GitHub tables, strikethrough and task lists): headings, nested lists, links and
+  images (absolute when the document has a page URL), tables with `colspan` / `rowspan`, code blocks with their
+  language, quotes, definition lists. `MarkdownOptions` leaves links or images out. Only what a browser shows is
+  written; a table that lays out a page is written as the blocks in its cells.
+  Text is escaped only where Markdown would read it as its own (`snake_case`, `2 * 3` and `[1]` stay as they are), and
+  emphasis that Markdown would not take for emphasis (`**Note:**text`) gets an empty comment next to it.
+  One pass over the parsed tags with no object per tag, linear time on any markup: 10–20x faster than ReverseMarkdown
+  and Html2Markdown on typical pages (up to 28x on a 510 KB page), with 37–62x less memory.
+  Cross-checked on every test page: rendered back to HTML by Markdig, the Markdown has the same text, links, images,
+  headings and list items as the page.
+- Package `z3l.FastHtmlParser.HtmlToMarkdown`, for those who look for an HTML to Markdown converter: this library
+  with one more method, `HtmlToMarkdown.Convert(html, url, options)`, which never returns null. It has the version
+  of z3l.FastHtmlParser, depends on it and is released with it; the two can be installed together.
+
 ## 1.5.0 (2026-11-20)
 
 ### Added

@@ -11,15 +11,19 @@
 
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.10.0" />
+    <PackageReference Include="Markdig" Version="1.6.0" />
     <PackageReference Include="MSTest" Version="4.0.2" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\z3l.FastHtmlParser\z3l.FastHtmlParser.csproj" />
+    <ProjectReference Include="..\..\src\z3l.FastHtmlParser.HtmlToMarkdown\z3l.FastHtmlParser.HtmlToMarkdown.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="Fixtures\**\*.html" CopyToOutputDirectory="PreserveNewest" />
+    <!-- the pages as Markdown, see MarkdownCrossCheckTests.Page_GivesTheSavedMarkdown -->
+    <None Include="Fixtures\*\*.md" CopyToOutputDirectory="PreserveNewest" />
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
     <Using Include="z3l.FastHtmlParser.Shortcuts" />
   </ItemGroup>

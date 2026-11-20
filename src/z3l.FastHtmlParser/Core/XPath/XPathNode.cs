@@ -132,6 +132,26 @@ internal ref struct AttributeScanner
         return p;
     }
 
+    /// <summary>
+    /// For a tag that is still a recorded struct: <paramref name="tagStart"/> is its '&lt;',
+    /// <paramref name="openTagEnd"/> the '&gt;' of its opening tag.
+    /// </summary>
+    public AttributeScanner(ReadOnlySpan<char> source, int tagStart, int openTagEnd)
+    {
+        _source = source;
+        _end = Math.Min(openTagEnd, source.Length);
+
+        // skip '<' and the name
+        var i = tagStart + 1;
+        while (i < _end)
+        {
+            var c = _source[i];
+            if (char.IsWhiteSpace(c) || c == '/' || c == '>') break;
+            i++;
+        }
+        _pos = i;
+    }
+
     public AttributeScanner(ParserTag tag)
     {
         _source = tag.Document.Source;

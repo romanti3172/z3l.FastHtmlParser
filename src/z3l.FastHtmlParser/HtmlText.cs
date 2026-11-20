@@ -29,4 +29,15 @@ public static class HtmlText
 
     /// <inheritdoc cref="ToTextWithLineBreaks(ReadOnlySpan{char})"/>
     public static string? ToTextWithLineBreaks(string? html) => ParsingCore.ClearTagsLineBreaks(html);
+
+    /// <summary>
+    /// Converts HTML to Markdown: headings, lists, links, images, tables, code blocks, quotes and emphasis;
+    /// see <see cref="ParserTagMarkdownExtensions"/>. Null for null or empty input.
+    /// To make the links absolute, parse the page with its URL and call <c>Markdown()</c> on the document:
+    /// <c>new HtmlParser(html, url).Markdown()</c>.
+    /// </summary>
+    public static string? ToMarkdown(string? html, MarkdownOptions? options = null)
+    {
+        return string.IsNullOrEmpty(html) ? null : new HtmlParser(html).Markdown(options);
+    }
 }

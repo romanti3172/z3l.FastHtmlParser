@@ -28,7 +28,8 @@ jobs:
       - name: Test
         run: dotnet test tests/z3l.FastHtmlParser.Tests -c Release
 
-      # Version comes from the tag: v0.1.0 -> 0.1.0. Untagged builds keep the csproj version.
+      # Version comes from the tag: v0.1.0 -> 0.1.0. Untagged builds keep the version of src/Directory.Build.props.
+      # Both packages get the same version; z3l.FastHtmlParser.HtmlToMarkdown depends on z3l.FastHtmlParser of it.
       # Packing also compares the public API with the last release (package validation in the csproj):
       # a breaking change fails the build.
       - name: Pack
@@ -39,14 +40,15 @@ jobs:
             VERSION_ARG="-p:Version=${GITHUB_REF_NAME#v}"
           fi
           dotnet pack src/z3l.FastHtmlParser -c Release -o artifacts $VERSION_ARG
+          dotnet pack src/z3l.FastHtmlParser.HtmlToMarkdown -c Release -o artifacts $VERSION_ARG
 
       - uses: actions/upload-artifact@v7
         with:
           name: nupkg
           path: artifacts/*
 
-  # Publishes the package built and tested above. A separate job, so that pull requests and
-  # branch builds never run with the permission to get a nuget.org key.
+  # Publishes the packages built and tested above: z3l.FastHtmlParser and z3l.FastHtmlParser.HtmlToMarkdown.
+  # A separate job, so that pull requests and branch builds never run with the permission to get a nuget.org key.
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
@@ -81,7 +83,7 @@ jobs:
         run: dotnet nuget push "artifacts/*.nupkg" --api-key "${{ steps.nuget_login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       # GitHub release for the tag: notes are the version's section of CHANGELOG.md
-      # ("## 1.4.0 (date)" up to the next "## "), the .nupkg is attached. A version with "-" is a prerelease.
+      # ("## 1.4.0 (date)" up to the next "## "), the .nupkg files are attached. A version with "-" is a prerelease.
       # An existing release for the tag (a rerun) is left as it is.
       - name: GitHub release
         shell: bash
@@ -100,7 +102,8 @@ jobs:
             echo "See [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/main/CHANGELOG.md)." > notes.md
           fi
           echo "" >> notes.md
-          echo "NuGet: https://www.nuget.org/packages/z3l.FastHtmlParser/$VERSION" >> notes.md
+          echo "NuGet: https://www.nuget.org/packages/z3l.FastHtmlParser/$VERSION ·" \
+            "https://www.nuget.org/packages/z3l.FastHtmlParser.HtmlToMarkdown/$VERSION" >> notes.md
           PRERELEASE=""
           if [[ "$VERSION" == *-* ]]; then PRERELEASE="--prerelease"; fi
           gh release create "$GITHUB_REF_NAME" artifacts/*.nupkg --verify-tag --title "$GITHUB_REF_NAME" \

@@ -165,6 +165,38 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
         }
     }
 
+    // What a plain relative link is put after to make it absolute: "https://example.com" for "/a/b" and
+    // "https://example.com/dir/" for "a/b". Made once per document, by resolving two links in the usual way.
+    private string? _pageSite;
+    private string? _pageFolder;
+    private bool _pagePrefixesResolved;
+
+    /// <summary>
+    /// The address of the site and of the folder of the page, for links that are a plain path (see
+    /// <c>MarkdownConverter.ResolveUrl</c>); null when the page has no URL such links can be put after.
+    /// </summary>
+    internal void GetPagePrefixes(out string? site, out string? folder)
+    {
+        if (!_pagePrefixesResolved)
+        {
+            if (PageUri is { } pageUri)
+            {
+                _pageSite = Prefix("/x", pageUri);
+                _pageFolder = Prefix("x", pageUri);
+            }
+            _pagePrefixesResolved = true; // a benign race: every thread makes the same strings
+        }
+
+        site = _pageSite;
+        folder = _pageFolder;
+
+        string? Prefix(string link, Uri pageUri)
+        {
+            string resolved = UriCore.CorrectLink(link, PageUrl, pageUri);
+            return resolved.EndsWith(link, StringComparison.Ordinal) ? resolved.Substring(0, resolved.Length - link.Length) : null;
+        }
+    }
+
     // Every search, navigation and text method of the document and of its tags reads the tag list or the source
     // through these properties, so after Dispose all of them fail the same way.
     internal TagList Data
