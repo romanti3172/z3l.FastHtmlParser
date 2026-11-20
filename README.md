@@ -15,6 +15,8 @@ Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 
   structure (`<br>`, `<p>`, `<li>`, `<div>`...).
 - **XPath 1.0.** `doc.XPath("//div[@class='card']/a")`, `doc.XPathValues("//a/@href")`, compiled and cached.
 - **CSS selectors.** `doc.Css("div.card > a[href^='/item']")`, `:nth-child()`, `:not()`, `:has()`, compiled and cached.
+- **Forms.** `form.Fields()` gives the fields a browser would send (hidden `__VIEWSTATE`, checked boxes, selected options),
+  ready for `FormUrlEncodedContent`.
 - **Parse from buffers.** `HtmlParser.Parse(memory)` reads a `char[]` or a pooled buffer in place, without a copy.
 - **Null-safe chains.** Every method accepts `null` and returns `null` / empty, so a chain never
   throws when something is missing.
@@ -100,7 +102,31 @@ tag.FullSource();      // outer HTML
 tag.AttributeHref();   // absolute URL
 tag.AttributeByName(HtmlAttribute.Content);   // decoded value
 tag.AttributeBody(HtmlAttribute.Content);     // value as written in the source
+
+foreach (var (name, value) in tag.Attributes()) { }   // all attributes: lower-case names, decoded values
 ```
+
+## Forms
+
+`Form()` gives the form of a tag (the `<form>` itself or the form a control belongs to), `Forms()` all forms of the page.
+`Fields()` returns what a browser sends when the form is submitted.
+
+```csharp
+var form = doc.Find(HtmlTag.Form, id: "form1").Form();
+
+form.Action;   // absolute URL
+form.Method;   // "get" / "post"
+form.Fields(); // [("__VIEWSTATE", "..."), ("__EVENTVALIDATION", "..."), ("txtSearch", "phone")]
+
+// an ASP.NET postback: send the clicked button too
+var button = doc.Find(new TagQuery(HtmlTag.Input) { AttributeName = "name", AttributeValue = "btnSearch" });
+var content = new FormUrlEncodedContent(form.Fields(button));
+```
+
+As in a browser: controls without a name and disabled ones (also inside `<fieldset disabled>`) are left out, a checkbox
+or radio button is sent only when checked (with its value or `on`), a `select` sends its selected option or the first
+enabled one, an option without `value` sends its text, a `textarea` its text, controls outside the form with
+`form="id"` belong to it, and submit buttons are sent only as the submitter. File inputs are left out.
 
 ## Navigation
 

@@ -1,4 +1,5 @@
 using z3l.FastHtmlParser.Core;
+using z3l.FastHtmlParser.Core.XPath;
 
 namespace z3l.FastHtmlParser;
 
@@ -38,6 +39,42 @@ public static class ParserTagAttributeExtensions
     public static string AttributeBody(this ParserTag? tag, HtmlAttribute attribute)
     {
         return SpanHandlingCore.SpanAttributeByName(tag, attribute).ToString();
+    }
+
+    /// <summary>
+    /// All attributes of the tag in source order, as a browser reads them: names in lower case, values decoded,
+    /// and of attributes with the same name only the first one (<c>&lt;a id=1 ID=2&gt;</c> has one id, <c>1</c>).
+    /// Empty for a null tag, a comment, a doctype or an XML declaration.
+    /// </summary>
+    public static IReadOnlyList<TagAttribute> Attributes(this ParserTag? tag)
+    {
+        if (tag == null || !XNav.IsElement(tag)) return [];
+
+        var document = tag.Document;
+        var source = document.Source;
+        var scanner = new AttributeScanner(tag);
+        List<TagAttribute>? list = null;
+
+        while (scanner.Next(out var nameStart, out var nameLength, out var valueStart, out var valueLength))
+        {
+            var name = source.Slice(nameStart, nameLength);
+            if (list != null && Contains(list, name)) continue;
+
+            var raw = valueStart < 0 ? default : source.Slice(valueStart, valueLength);
+            (list ??= new List<TagAttribute>(4)).Add(new TagAttribute(
+                ParsingCore.LowerAttributeName(name), SpanHandlingCore.DecodeAttribute(raw), document, valueStart, valueLength));
+        }
+
+        return list ?? (IReadOnlyList<TagAttribute>)[];
+
+        static bool Contains(List<TagAttribute> list, ReadOnlySpan<char> name)
+        {
+            foreach (var attribute in list)
+            {
+                if (name.Equals(attribute.Name, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
     }
 
     /// <summary>
