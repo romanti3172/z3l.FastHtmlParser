@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Runtime.CompilerServices;
 using z3l.FastHtmlParser.Core;
 
 namespace z3l.FastHtmlParser;
@@ -9,42 +10,45 @@ namespace z3l.FastHtmlParser;
 /// </summary>
 public class ParserTag : IEnumerable<ParserTag>, ITagSearchable
 {
-    private readonly int _key; // (int)HtmlTag, or -1 for a name that is not in HtmlTag
-    private readonly string? _customName;
+    // The chunk of structs the parser recorded this tag in: the tag keeps it, so what it holds itself is still there
+    // after Dispose, and reads it with one array access.
+    private readonly ParsingCore.TagNode[] _chunk;
+    private readonly int _slot;
 
-    internal ParserTag(HtmlParser document, int index, int parentIndex, HtmlTag? tag, string? customName, int start, int end, int innerStart, int depth)
+    internal ParserTag(HtmlParser document, ParsingCore.TagNode[] chunk, int index)
     {
         Document = document;
+        _chunk = chunk;
+        _slot = index & (TagList.ChunkSize - 1);
         Index = index;
-        ParentIndex = parentIndex;
-        _key = tag is { } known ? (int)known : -1;
-        _customName = customName;
-        Start = start;
-        End = end;
-        InnerStart = innerStart;
-        Depth = depth;
+    }
+
+    internal ref readonly ParsingCore.TagNode Node
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => ref _chunk[_slot];
     }
 
     /// <summary>The document this tag belongs to.</summary>
     public HtmlParser Document { get; }
 
     /// <summary>Position of the opening '&lt;'.</summary>
-    public int Start { get; }
+    public int Start => Node.Start;
 
     /// <summary>Position of the last '&gt;': of the closing tag when there is one, otherwise of the opening tag.</summary>
-    public int End { get; internal set; }
+    public int End => Node.End;
 
     /// <summary>Position right after the opening tag; 0 when the tag is not closed.</summary>
-    public int InnerStart { get; internal set; }
+    public int InnerStart => Node.InnerStart;
 
     /// <summary>Position of the last char before the closing tag; 0 when the tag is not closed.</summary>
-    public int InnerEnd { get; internal set; }
+    public int InnerEnd => Node.InnerEnd;
 
     /// <summary>Nesting depth: 0 for top-level tags.</summary>
-    public int Depth { get; }
+    public int Depth => Node.Depth;
 
     /// <summary>Lower-case tag name ("div", "!--" for comments, "custom-tag", ...).</summary>
-    public string? Name => _customName ?? (_key >= 0 ? ParsingCore.TagNames[_key] : null);
+    public string? Name => Node.CustomName ?? (Node.Key >= 0 ? ParsingCore.TagNames[Node.Key] : null);
 
     /// <summary>Whether another tag starts inside this one.</summary>
     public bool HasChildren()
@@ -59,16 +63,16 @@ public class ParserTag : IEnumerable<ParserTag>, ITagSearchable
     internal int Index { get; }
 
     /// <summary>Position of the enclosing tag in the document's tag list, or -1 for top-level tags.</summary>
-    internal int ParentIndex { get; }
+    internal int ParentIndex => Node.ParentIndex;
 
     /// <summary>The tag as <see cref="HtmlTag"/>, or null for names not in the enum.</summary>
-    internal HtmlTag? Tag => _key >= 0 ? (HtmlTag)_key : null;
+    internal HtmlTag? Tag => Node.Key is var key && key >= 0 ? (HtmlTag)key : null;
 
     /// <summary>(int)<see cref="HtmlTag"/>, or -1: compared directly by <see cref="TagQuery"/>.</summary>
-    internal int Key => _key;
+    internal int Key => Node.Key;
 
     /// <summary>The lower-case name for tags not in <see cref="HtmlTag"/>.</summary>
-    internal string? CustomName => _customName;
+    internal string? CustomName => Node.CustomName;
 
     // IEnumerable: descendants
 
@@ -92,7 +96,7 @@ public class ParserTag : IEnumerable<ParserTag>, ITagSearchable
 
     // ITagSearchable: searches the descendants
 
-    void ITagSearchable.GetScope(out List<ParserTag> tags, out int first, out int end)
+    void ITagSearchable.GetScope(out TagList tags, out int first, out int end)
     {
         tags = Document.Data;
         first = Index + 1;

@@ -104,9 +104,12 @@ public sealed class CssQuery
         scope.GetScope(out var tags, out int first, out int end);
         for (int i = first, count = tags.Count; i < count; i++)
         {
-            var tag = tags[i];
-            if (tag.End > end) break;
+            ref readonly var node = ref tags.Node(i);
+            if (node.End > end) break;
 
+            // the tag object is made only for a tag the type test leaves in
+            if (!_selector.MayMatch(node)) continue;
+            var tag = tags[i];
             if (!_selector.Matches(tag, context)) continue;
 
             if (firstOnly) return tag;

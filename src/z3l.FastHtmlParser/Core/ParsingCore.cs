@@ -85,13 +85,30 @@ internal static class ParsingCore
     private struct FastMode : IScanMode { public static bool Rules => false; }
     private struct RulesMode : IScanMode { public static bool Rules => true; }
 
+    /// <summary>A tag as the scan records it; the ParserTag objects are made from these once the scan is done.</summary>
+    internal struct TagNode(int parentIndex, int key, string? customName, int start, int end, int innerStart, int depth)
+    {
+        public int Start = start, End = end, InnerStart = innerStart, InnerEnd, ParentIndex = parentIndex;
+        private readonly int _keyDepth = (key & 0xFFFF) | (depth << 16); // 32 bytes a tag: the depth is at most MaxDepth + 1
+        public string? CustomName = customName;
+
+        /// <summary>(int)HtmlTag, or -1 for a custom name.</summary>
+        public readonly int Key => (short)_keyDepth;
+        public readonly int Depth => _keyDepth >>> 16;
+
+        /// <summary>An element: not a comment, doctype, XML declaration or other "!..." / "?..." markup.</summary>
+        public readonly bool IsElement => Key >= 0
+            ? Key != (int)HtmlTag.Comment && Key != (int)HtmlTag.Doctype && Key != (int)HtmlTag.XmlDeclaration
+            : !string.IsNullOrEmpty(CustomName) && CustomName[0] != '!' && CustomName[0] != '?';
+    }
+
     // Everything a scan reads and updates; a scan copies the hot fields into locals and writes them back.
     private ref struct ParseState
     {
         public HtmlParser Parent;
         public ReadOnlySpan<char> Source;
         public bool IsXml;
-        public ParserTag[] Tags;
+        public TagNode[] Tags;
         public TagState[] States;
         public int[] Stack;                 // indexes of the open tags that contain the following ones
         public int[]? OpenByKey;            // per HtmlTag, how many are on the stack: kept only in RulesMode
@@ -102,12 +119,12 @@ internal static class ParsingCore
         public long RepairBudget;           // chars that may still be scanned again by Repair
     }
 
-    internal static List<ParserTag> ParsePagesource(HtmlParser parent, ReadOnlySpan<char> pagesource)
+    internal static TagList ParsePagesource(HtmlParser parent, ReadOnlySpan<char> pagesource)
     {
         // Every tag starts with its own '<', so this is an exact upper bound:
         // tags are collected in pooled arrays and the result list is allocated once with the exact size.
         int maxTags = pagesource.Count('<');
-        if (maxTags == 0) return [];
+        if (maxTags == 0) return TagList.Empty(parent);
 
         var st = new ParseState
         {
@@ -116,7 +133,7 @@ internal static class ParsingCore
             // An XML document (RSS, Atom, sitemap, XHTML) is parsed by XML rules: elements are closed only by an end tag or "/>"
             // (an RSS <link> has content), and no element has raw-text content.
             IsXml = pagesource.TrimStart().TrimStart('﻿').StartsWith("<?xml", StringComparison.OrdinalIgnoreCase),
-            Tags = ArrayPool<ParserTag>.Shared.Rent(maxTags),
+            Tags = ArrayPool<TagNode>.Shared.Rent(maxTags),
             States = ArrayPool<TagState>.Shared.Rent(maxTags),
             Stack = ArrayPool<int>.Shared.Rent(64),
             OpenInList = ArrayPool<int>.Shared.Rent(TagNames.Length),
@@ -141,25 +158,19 @@ internal static class ParsingCore
 
             int count = st.Count;
             var tags = st.Tags;
-            var result = new List<ParserTag>(count);
-            CollectionsMarshal.SetCount(result, count);
-            tags.AsSpan(0, count).CopyTo(CollectionsMarshal.AsSpan(result));
-
-            // Финализация незакрытых/одиночных тегов
             for (int k = 0; k < count; k++)
             {
-                if (tags[k].InnerEnd == 0)
-                {
-                    tags[k].InnerStart = 0;
-                }
+                // Финализация незакрытых/одиночных тегов
+                if (tags[k].InnerEnd == 0) tags[k].InnerStart = 0;
             }
 
-            return result;
+            // the document keeps the tags in arrays of the exact size: there are fewer tags than '<' (text, scripts, comments)
+            return new TagList(parent, tags.AsSpan(0, count));
         }
         finally
         {
-            Array.Clear(st.Tags, 0, st.Count); // do not keep the tags alive through the pool
-            ArrayPool<ParserTag>.Shared.Return(st.Tags);
+            Array.Clear(st.Tags, 0, st.Count); // do not keep the names alive through the pool
+            ArrayPool<TagNode>.Shared.Return(st.Tags);
             ArrayPool<TagState>.Shared.Return(st.States);
             ArrayPool<int>.Shared.Return(st.Stack);
             ArrayPool<int>.Shared.Return(st.OpenInList);
@@ -209,7 +220,7 @@ internal static class ParsingCore
                     int commentParent = stackTop > 0 ? openTagsStack[stackTop - 1] : -1;
                     var depth = commentParent >= 0 ? states[commentParent].Depth + 1 : 0;
 
-                    tags[count] = new ParserTag(parent, count, commentParent, HtmlTag.Comment, null, i, commentEnd, commentEnd + 1, depth);
+                    tags[count] = new TagNode(commentParent, (int)HtmlTag.Comment, null, i, commentEnd, commentEnd + 1, depth);
                     states[count] = new TagState { Key = (int)HtmlTag.Comment, Depth = depth, PrevOpen = -1 };
                     count++;
 
@@ -396,17 +407,7 @@ internal static class ParsingCore
                     int parentIndex = stackTop > 0 ? openTagsStack[stackTop - 1] : -1;
                     var level = parentIndex >= 0 ? states[parentIndex].Depth + 1 : 0;
 
-                    tags[count] = new ParserTag(
-                        parent,
-                        count,                          // index
-                        parentIndex,                    // index of the enclosing tag, -1 at the top level
-                        htmlTagEnum,                    // HtmlTag name
-                        htmlTagString,                  // name
-                        tagStartPosition - 1,           // PositionStart
-                        i,                              // PositionEnd
-                        i + 1,                          // PositionInnerStart
-                        level
-                       );
+                    tags[count] = new TagNode(parentIndex, key, htmlTagString, tagStartPosition - 1, i, i + 1, level);
 
                     // Void elements (<br>, <img>, <meta>, ...) and declarations (<!doctype>) never contain anything:
                     // they do not nest the following tags and no end tag is matched to them.
@@ -540,14 +541,14 @@ internal static class ParsingCore
     /// <paramref name="end"/>), as a browser ends them with the enclosing element; a self-closed tag (&lt;span/&gt;) stays
     /// without content. Every tag is removed once, so all the scans of the open list together are linear.
     /// </summary>
-    private static void TruncateOpenList(ParserTag[] tags, TagState[] states, int first, int end,
+    private static void TruncateOpenList(TagNode[] tags, TagState[] states, int first, int end,
         int[] openInList, Dictionary<string, int>? customNames, ref int lastOpen)
     {
         int k = lastOpen;
         while (k >= first)
         {
             ref TagState state = ref states[k];
-            var tag = tags[k];
+            ref var tag = ref tags[k];
 
             if (state.Key >= 0) openInList[state.Key]--;
             else AdjustOpenCustomName(customNames, tag.CustomName, -1);
@@ -630,7 +631,7 @@ internal static class ParsingCore
     /// together with everything opened inside it.
     /// </summary>
     [MethodImpl(MethodImplOptions.NoInlining)] // rare: keeps the main loop small
-    private static void CloseInScope(ImpliedEndRule rule, ParserTag[] tags, TagState[] states, int[] stack, ref int stackTop,
+    private static void CloseInScope(ImpliedEndRule rule, TagNode[] tags, TagState[] states, int[] stack, ref int stackTop,
         int[]? openByKey, ref int openP, int end, int[] openInList, Dictionary<string, int>? customNames, ref int lastOpen)
     {
         int from = ScopeStart(rule, states, stack, stackTop);

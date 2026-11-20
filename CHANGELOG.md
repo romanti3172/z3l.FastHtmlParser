@@ -15,6 +15,16 @@
   `__VIEWSTATE`) follow the HTML standard. Cross-checked with AngleSharp's form submission; where AngleSharp differs from
   the standard (value sanitization, `form="id"` outside the form, CR LF in every value) the standard is followed.
 
+### Performance
+
+- Parsing makes no object per tag: the parser records the tags as compact structs, and a `ParserTag` is made the first
+  time the tag is asked for (the same object every time after). Searches (`Find`, `FindAll`, CSS, XPath) test names on
+  the structs and make objects only for the tags they check further. Parsing allocates about half as much (books page
+  39 KB → 18 KB) and is 6–10% faster; a big page no longer puts one array on the large object heap.
+- XPath: `contains` / `starts-with` / `ends-with` on an attribute, also the class idiom
+  `contains(concat(' ', @class, ' '), ' x ')`, test the attribute value in place; `.` steps (`.//a`) cost nothing.
+  The books XPath benchmark allocates 62 KB instead of 173 KB.
+
 ## 1.4.1 (2026-11-17)
 
 ### Fixed

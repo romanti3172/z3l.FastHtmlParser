@@ -37,7 +37,7 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
         _source = source;
         _text = text;
         _owner = owner;
-        _data = source.IsEmpty ? [] : ParsingCore.ParsePagesource(this, source.Span);
+        _data = source.IsEmpty ? TagList.Empty(this) : ParsingCore.ParsePagesource(this, source.Span);
     }
 
     /// <summary>
@@ -88,7 +88,7 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
         return new HtmlParser(memory[..length], null, owner, pageUrl);
     }
 
-    private readonly List<ParserTag> _data;
+    private readonly TagList _data;
 
     // Sibling links and positions for CSS selectors, built by the first selector that needs them.
     internal Core.Css.CssTree? CssTree;
@@ -167,7 +167,7 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
 
     // Every search, navigation and text method of the document and of its tags reads the tag list or the source
     // through these properties, so after Dispose all of them fail the same way.
-    internal List<ParserTag> Data
+    internal TagList Data
     {
         get
         {
@@ -178,7 +178,7 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
 
     // ITagSearchable
 
-    void ITagSearchable.GetScope(out List<ParserTag> tags, out int first, out int end)
+    void ITagSearchable.GetScope(out TagList tags, out int first, out int end)
     {
         tags = Data;
         first = 0;
