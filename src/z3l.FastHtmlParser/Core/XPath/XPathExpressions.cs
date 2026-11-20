@@ -364,6 +364,41 @@ internal sealed class AttributeEqualsExpr(string name, string value, bool negate
     }
 }
 
+/// <summary>
+/// <c>contains(concat(prefix, @name, suffix), 'needle')</c> (and starts-with, ends-with; prefix and suffix may be empty):
+/// tested on the attribute value in place. No allocation unless the value contains '&amp;' or is long.
+/// </summary>
+internal sealed class AttributeStringTestExpr(Fn fn, string prefix, string name, string suffix, string needle) : Expr
+{
+    public override XType Type => XType.Boolean;
+    public override object Eval(in Ctx ctx) => XValue.Box(EvalBool(ctx));
+
+    public override bool EvalBool(in Ctx ctx)
+    {
+        // a missing attribute is an empty node-set, whose string-value is ""
+        XNav.TryGetAttribute(ctx.Node, name, out var raw);
+
+        string? decoded = HtmlDecodeCore.NeedsDecoding(raw) ? SpanHandlingCore.DecodeAttribute(raw) : null;
+        ReadOnlySpan<char> value = decoded ?? raw;
+
+        if (prefix.Length == 0 && suffix.Length == 0) return Test(value);
+
+        int length = prefix.Length + value.Length + suffix.Length;
+        Span<char> joined = length <= 256 ? stackalloc char[256] : new char[length];
+        prefix.CopyTo(joined);
+        value.CopyTo(joined.Slice(prefix.Length));
+        suffix.CopyTo(joined.Slice(prefix.Length + value.Length));
+        return Test(joined.Slice(0, length));
+    }
+
+    private bool Test(ReadOnlySpan<char> value) => fn switch
+    {
+        Fn.Contains => value.Contains(needle, StringComparison.Ordinal),
+        Fn.StartsWith => value.StartsWith(needle, StringComparison.Ordinal),
+        _ => value.EndsWith(needle, StringComparison.Ordinal),
+    };
+}
+
 /// <summary><c>[@name]</c>: whether the element has the attribute.</summary>
 internal sealed class AttributeExistsExpr(string name) : Expr
 {
@@ -398,15 +433,18 @@ internal sealed class Step(Axis axis, NodeTest test, Expr[] predicates)
 
     public bool HasPositionalPredicates => Predicates.Any(p => p.IsPositional);
 
-    public List<XNode> Apply(List<XNode> input, EvalState state)
+    public List<XNode> Apply(in XNode node, EvalState state)
     {
         var result = new List<XNode>();
+        Select(node, result, state);
+        return result;
+    }
 
-        if (input.Count == 1)
-        {
-            Select(input[0], result, state);
-            return result;
-        }
+    public List<XNode> Apply(List<XNode> input, EvalState state)
+    {
+        if (input.Count == 1) return Apply(input[0], state);
+
+        var result = new List<XNode>();
 
         // Nested input nodes (//div//a on divs inside divs, //a/ancestor::* on links in one list) give the same nodes
         // again and again: n nested nodes collected about n² nodes before the duplicates were removed. When the
@@ -722,14 +760,20 @@ internal sealed class PathExpr(Expr? start, bool absolute, Step[] steps) : Expr
     public override object Eval(in Ctx ctx)
     {
         List<XNode> current;
+        int first = 0;
         if (Start != null) current = Start.EvalNodes(ctx);
-        else if (Absolute) current = [XNode.Root(ctx.State.Document)];
-        else current = [ctx.Node];
+        else if (Steps.Length == 0) current = [Absolute ? XNode.Root(ctx.State.Document) : ctx.Node];
+        else
+        {
+            // one context node: the first step selects from it directly, with no one-node list for the input
+            current = Steps[0].Apply(Absolute ? XNode.Root(ctx.State.Document) : ctx.Node, ctx.State);
+            first = 1;
+        }
 
-        foreach (var step in Steps)
+        for (int k = first; k < Steps.Length; k++)
         {
             if (current.Count == 0) break;
-            current = step.Apply(current, ctx.State);
+            current = Steps[k].Apply(current, ctx.State);
         }
 
         return current;
@@ -805,6 +849,10 @@ internal sealed class FunctionExpr : Expr
     }
 
     public override XType Type => _type;
+
+    internal Fn Fn => _fn;
+
+    internal Expr[] Args => _args;
 
     public override bool UsesPosition => _fn is Fn.Position or Fn.Last || _args.Any(a => a.UsesPosition);
 

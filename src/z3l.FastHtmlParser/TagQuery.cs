@@ -111,22 +111,28 @@ public readonly struct TagQuery
 
     /// <summary>Small enough to be inlined into the search loops: one integer comparison for most tags.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool Matches(ParserTag tag)
+    internal bool Matches(ParserTag tag) => MatchesName(tag.Node) && (!_more || MatchesCriteria(tag));
+
+    /// <summary>Whether a criterion besides the name is set: then <see cref="MatchesCriteria"/> needs the tag object.</summary>
+    internal bool HasCriteria => _more;
+
+    /// <summary>The name test on the recorded tag, with no tag object: one integer comparison for most tags.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool MatchesName(in ParsingCore.TagNode node)
     {
         if (_key != 0)
         {
             // a custom tag can still match a string name (OrdinalIgnoreCase), as IsName(string) does
-            if (tag.Key != _key - 1 && (tag.Key >= 0 || _name == null || !tag.IsName(_name))) return false;
-        }
-        else if (_name != null && !tag.IsName(_name))
-        {
-            return false;
+            return node.Key == _key - 1 || (node.Key < 0 && _name != null && NameEquals(node));
         }
 
-        return !_more || MatchesCriteria(tag);
+        return _name == null || NameEquals(node);
     }
 
-    private bool MatchesCriteria(ParserTag tag)
+    private bool NameEquals(in ParsingCore.TagNode node) =>
+        MemoryExtensions.Equals(_name, node.Key >= 0 ? ParsingCore.TagNames[node.Key] : node.CustomName, StringComparison.OrdinalIgnoreCase);
+
+    internal bool MatchesCriteria(ParserTag tag)
     {
         // attributes
         if (_id != null && !tag.IsId(_id)) return false;

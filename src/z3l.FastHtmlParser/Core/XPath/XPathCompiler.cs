@@ -253,6 +253,30 @@ internal sealed class XPathCompiler
         return new CompareExpr(op, left, right);
     }
 
+    /// <summary>
+    /// <c>contains(@a, 'x')</c>, <c>starts-with(...)</c>, <c>ends-with(...)</c>, also with the attribute wrapped in literals
+    /// (<c>contains(concat(' ', @class, ' '), ' x ')</c>, the usual class test) are evaluated on the attribute in place,
+    /// without building a node-set and strings for every element; everything else is a plain function call.
+    /// </summary>
+    private static Expr MakeFunction(Fn fn, Expr[] args, XType type)
+    {
+        if (fn is Fn.Contains or Fn.StartsWith or Fn.EndsWith && args[1] is LiteralExpr needle)
+        {
+            string name;
+            if (TryGetAttributeName(args[0], out name))
+            {
+                return new AttributeStringTestExpr(fn, "", name, "", needle.Value);
+            }
+            if (args[0] is FunctionExpr { Fn: Fn.Concat, Args: [LiteralExpr prefix, var attribute, LiteralExpr suffix] }
+                && TryGetAttributeName(attribute, out name))
+            {
+                return new AttributeStringTestExpr(fn, prefix.Value, name, suffix.Value, needle.Value);
+            }
+        }
+
+        return new FunctionExpr(fn, args, type);
+    }
+
     /// <summary>Whether the expression is a bare <c>@name</c> (one attribute step, no predicates).</summary>
     private static bool TryGetAttributeName(Expr expr, out string name)
     {
@@ -533,7 +557,7 @@ internal sealed class XPathCompiler
                     throw Error($"{name}() needs a node-set argument", token.Position);
                 }
 
-                return new FunctionExpr(function.Fn, [.. args], function.Type);
+                return MakeFunction(function.Fn, [.. args], function.Type);
             }
         }
     }
@@ -544,6 +568,14 @@ internal sealed class XPathCompiler
     /// </summary>
     private static Step[] Optimize(List<Step> steps)
     {
+        // "." (self::node() with no predicates) gives back each input node: .//a is //a from the context node.
+        // The last step stays, so "." alone still selects the context node.
+        for (int i = steps.Count - 1; i >= 0 && steps.Count > 1; i--)
+        {
+            var step = steps[i];
+            if (step.Axis == Axis.Self && step.Test == NodeTest.AnyNode && step.Predicates.Length == 0) steps.RemoveAt(i);
+        }
+
         for (int i = 0; i < steps.Count - 1; i++)
         {
             var step = steps[i];

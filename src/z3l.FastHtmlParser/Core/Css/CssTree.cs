@@ -8,7 +8,7 @@ namespace z3l.FastHtmlParser.Core.Css;
 /// </summary>
 internal sealed class CssTree
 {
-    private readonly List<ParserTag> _data;
+    private readonly TagList _data;
     private readonly int[] _previous;  // index of the previous element sibling, -1 for none
     private readonly int[] _next;      // index of the next element sibling, -1 for none
     private readonly int[] _position;  // 1-based position among the element siblings
@@ -33,7 +33,7 @@ internal sealed class CssTree
         return Interlocked.CompareExchange(ref document.CssTree, tree, null) ?? tree;
     }
 
-    private CssTree(List<ParserTag> data)
+    private CssTree(TagList data)
     {
         _data = data;
         int count = data.Count;
@@ -51,8 +51,8 @@ internal sealed class CssTree
         {
             _previous[i] = _next[i] = -1;
 
-            var tag = data[i];
-            if (!CssMatcher.IsElement(tag)) continue;
+            ref readonly var tag = ref data.Node(i);
+            if (!tag.IsElement) continue;
 
             int slot = tag.ParentIndex + 1;
             int previous = lastChild[slot];
@@ -64,11 +64,14 @@ internal sealed class CssTree
 
         for (int i = 0; i < count; i++)
         {
-            if (_position[i] > 0) _fromEnd[i] = children[data[i].ParentIndex + 1] - _position[i] + 1;
+            if (_position[i] > 0) _fromEnd[i] = children[data.Node(i).ParentIndex + 1] - _position[i] + 1;
         }
     }
 
     public ParserTag? Previous(ParserTag tag) => At(_previous[tag.Index]);
+
+    /// <summary>Index of the previous element sibling, -1 for none.</summary>
+    public int PreviousIndex(int index) => _previous[index];
 
     public ParserTag? Next(ParserTag tag) => At(_next[tag.Index]);
 
@@ -98,8 +101,8 @@ internal sealed class CssTree
 
         for (int i = 0; i < count; i++)
         {
-            var tag = _data[i];
             if (_position[i] == 0) continue; // not an element
+            ref readonly var tag = ref _data.Node(i);
 
             var key = (tag.ParentIndex, tag.Key, tag.Key >= 0 ? null : tag.CustomName);
             seen.TryGetValue(key, out int n);
@@ -110,7 +113,7 @@ internal sealed class CssTree
         {
             if (position[i] == 0) continue;
 
-            var tag = _data[i];
+            ref readonly var tag = ref _data.Node(i);
             fromEnd[i] = seen[(tag.ParentIndex, tag.Key, tag.Key >= 0 ? null : tag.CustomName)] - position[i] + 1;
         }
 

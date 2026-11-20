@@ -213,6 +213,14 @@ internal sealed class NodeTest
 
     public bool MatchesTags => Kind is TestKind.Name or TestKind.Prefix or TestKind.Wildcard or TestKind.Node or TestKind.Comment or TestKind.Container;
 
+    /// <summary>A test on the recorded tag that rules most tags out with no tag object; true: ask <see cref="Matches(ParserTag)"/>.</summary>
+    public bool MayMatch(in ParsingCore.TagNode node) => Kind switch
+    {
+        TestKind.Name => _query.MatchesName(node),
+        TestKind.Prefix or TestKind.Wildcard or TestKind.Container => node.IsElement,
+        _ => true,
+    };
+
     public bool Matches(ParserTag tag) => Kind switch
     {
         TestKind.Name => _query.Matches(tag),
@@ -245,14 +253,7 @@ internal static class XNav
 {
     public static bool IsComment(ParserTag tag) => tag.Key == (int)HtmlTag.Comment;
 
-    public static bool IsElement(ParserTag tag)
-    {
-        var key = tag.Key;
-        if (key >= 0) return key != (int)HtmlTag.Comment && key != (int)HtmlTag.Doctype && key != (int)HtmlTag.XmlDeclaration;
-
-        var name = tag.CustomName;
-        return !string.IsNullOrEmpty(name) && name[0] != '!' && name[0] != '?';
-    }
+    public static bool IsElement(ParserTag tag) => tag.Node.IsElement;
 
     /// <summary>The tags (Data[first..], up to <paramref name="end"/>, at <paramref name="childDepth"/>) and the text range of a container.</summary>
     private static bool TryGetContent(in XNode node, out int first, out int end, out int childDepth, out int textStart, out int textEnd)
@@ -297,12 +298,12 @@ internal static class XNav
 
         for (int i = first, count = data.Count; i < count; i++)
         {
-            var tag = data[i];
+            ref readonly var tag = ref data.Node(i);
             if (tag.End > end) break;
             if (tag.Depth != childDepth) continue;
 
             if (wantText && tag.Start > p) AddText(node.Document, parent, p, Math.Min(tag.Start, textEnd), output);
-            if (wantTags && test.Matches(tag)) output.Add(XNode.FromTag(tag));
+            if (wantTags && test.MayMatch(tag) && data[i] is var element && test.Matches(element)) output.Add(XNode.FromTag(element));
 
             p = tag.End + 1;
         }
@@ -330,10 +331,11 @@ internal static class XNav
         var data = node.Document.Data;
         for (int i = first, count = data.Count; i < count; i++)
         {
-            var tag = data[i];
+            ref readonly var tag = ref data.Node(i);
             if (tag.End > end) break;
 
-            if (test.Matches(tag)) output.Add(XNode.FromTag(tag));
+            // the tag object is made only for a tag the recorded data leaves in
+            if (test.MayMatch(tag) && data[i] is var element && test.Matches(element)) output.Add(XNode.FromTag(element));
         }
     }
 

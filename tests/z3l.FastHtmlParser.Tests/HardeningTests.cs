@@ -289,4 +289,27 @@ public sealed class HardeningTests
         Assert.AreEqual("p", p.Name);
         Assert.AreEqual(1, p.Depth);
     }
+
+    [TestMethod]
+    public void ManyTags_AcrossChunks_SameAsSmallDocuments()
+    {
+        // more tags than one chunk of the tag list holds (2048): tags, parents, searches and identity across chunks
+        var html = new StringBuilder("<div id='root'>");
+        for (int i = 0; i < 3000; i++) html.Append("<ul class='u").Append(i).Append("'><li><a href='/").Append(i).Append("'>x</a></li></ul>");
+        html.Append("</div>");
+        var doc = new HtmlParser(html.ToString());
+
+        Assert.AreEqual(1 + 3000 * 3, doc.Count());
+        var links = doc.FindAll(HtmlTag.A).ToList();
+        Assert.HasCount(3000, links);
+        Assert.AreEqual("/2999", links[^1].AttributeByName("href"));
+        Assert.AreSame(links[2500], doc.FindAll(HtmlTag.A).ElementAt(2500));
+
+        var last = doc.Find(new TagQuery(HtmlTag.Ul) { Class = "u2999" })!;
+        Assert.AreEqual("root", last.Parent()!.AttributeByName("id"));
+        Assert.AreSame(links[^1], last.Find(HtmlTag.A));
+        Assert.AreEqual("/2047", doc.CssFirst("ul.u2047 > li a")!.AttributeByName("href"));
+        Assert.AreEqual("/2048", doc.XPathValue("//ul[@class='u2048']/li/a/@href"));
+        Assert.HasCount(3000, doc.Css("div ul + ul a, div > ul:first-child a"));
+    }
 }

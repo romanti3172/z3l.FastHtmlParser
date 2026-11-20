@@ -39,6 +39,16 @@ internal sealed class CssSelectorList(CssComplex[] items)
         }
         return false;
     }
+
+    /// <summary>The type test of the rightmost compounds on the recorded tag: false rules the tag out with no tag object.</summary>
+    public bool MayMatch(in ParsingCore.TagNode node)
+    {
+        foreach (var item in Items)
+        {
+            if (item.Compounds[^1].MatchesType(node)) return true;
+        }
+        return false;
+    }
 }
 
 /// <summary>
@@ -59,20 +69,16 @@ internal sealed class CssCompound(int key, string? name, CssSimple[] simples)
     private readonly string? _name = name;    // lower-case name not in HtmlTag; null with _key -1: any element
     private readonly CssSimple[] _simples = simples;
 
+    public bool MatchesType(in ParsingCore.TagNode node)
+    {
+        if (_key >= 0) return node.Key == _key;
+        if (_name != null) return node.Key < 0 && string.Equals(node.CustomName, _name, StringComparison.Ordinal);
+        return node.IsElement;
+    }
+
     public bool Matches(ParserTag tag, in CssContext context)
     {
-        if (_key >= 0)
-        {
-            if (tag.Key != _key) return false;
-        }
-        else if (_name != null)
-        {
-            if (tag.Key >= 0 || !string.Equals(tag.CustomName, _name, StringComparison.Ordinal)) return false;
-        }
-        else if (!CssMatcher.IsElement(tag))
-        {
-            return false;
-        }
+        if (!MatchesType(tag.Node)) return false;
 
         foreach (var simple in _simples)
         {
@@ -99,32 +105,28 @@ internal static class CssMatcher
 
         if (i == 0) return selector.Leading == CssCombinator.None || IsRelated(selector.Leading, context.Anchor, tag, context);
 
+        // The walks go by index over the recorded tags: a tag object is made only for a tag whose type matches.
+        var data = tag.Document.Data;
         switch (selector.Combinators[i - 1])
         {
             case CssCombinator.Child:
-            {
-                var parent = Parent(tag);
-                return parent != null && Matches(selector, i - 1, parent, context);
-            }
+                return MatchesAt(selector, i - 1, data, tag.ParentIndex, context);
             case CssCombinator.Descendant:
             {
-                for (var parent = Parent(tag); parent != null; parent = Parent(parent))
+                for (int parent = tag.ParentIndex; parent >= 0; parent = data.Node(parent).ParentIndex)
                 {
-                    if (Matches(selector, i - 1, parent, context)) return true;
+                    if (MatchesAt(selector, i - 1, data, parent, context)) return true;
                 }
                 return false;
             }
             case CssCombinator.Adjacent:
-            {
-                var previous = context.Tree.Previous(tag);
-                return previous != null && Matches(selector, i - 1, previous, context);
-            }
+                return MatchesAt(selector, i - 1, data, context.Tree.PreviousIndex(tag.Index), context);
             case CssCombinator.Sibling:
             {
                 var tree = context.Tree;
-                for (var previous = tree.Previous(tag); previous != null; previous = tree.Previous(previous))
+                for (int previous = tree.PreviousIndex(tag.Index); previous >= 0; previous = tree.PreviousIndex(previous))
                 {
-                    if (Matches(selector, i - 1, previous, context)) return true;
+                    if (MatchesAt(selector, i - 1, data, previous, context)) return true;
                 }
                 return false;
             }
@@ -132,6 +134,10 @@ internal static class CssMatcher
                 return false;
         }
     }
+
+    /// <summary><see cref="Matches(CssComplex, int, ParserTag, in CssContext)"/> for the tag at <paramref name="index"/> (-1: none).</summary>
+    private static bool MatchesAt(CssComplex selector, int i, TagList data, int index, in CssContext context) =>
+        index >= 0 && selector.Compounds[i].MatchesType(data.Node(index)) && Matches(selector, i, data[index], context);
 
     /// <summary>Whether <paramref name="tag"/> stands in the <paramref name="combinator"/> relation to <paramref name="anchor"/> (null: the document).</summary>
     private static bool IsRelated(CssCombinator combinator, ParserTag? anchor, ParserTag tag, in CssContext context)
@@ -142,9 +148,10 @@ internal static class CssMatcher
                 return anchor == null ? tag.ParentIndex < 0 : tag.ParentIndex == anchor.Index;
             case CssCombinator.Descendant:
                 if (anchor == null) return true;
-                for (var parent = Parent(tag); parent != null; parent = Parent(parent))
+                var data = tag.Document.Data;
+                for (int parent = tag.ParentIndex; parent >= anchor.Index; parent = data.Node(parent).ParentIndex)
                 {
-                    if (parent == anchor) return true;
+                    if (parent == anchor.Index) return true;
                 }
                 return false;
             case CssCombinator.Adjacent:

@@ -15,10 +15,13 @@ public static class ParserTagSearchExtensions
         scope.GetScope(out var tags, out int first, out int end);
         for (int i = first, count = tags.Count; i < count; i++)
         {
-            var tag = tags[i];
-            if (tag.End > end) break;
+            ref readonly var node = ref tags.Node(i);
+            if (node.End > end) break;
 
-            if (query.Matches(tag)) return tag;
+            // the tag object is made only for a tag whose name matches
+            if (!query.MatchesName(node)) continue;
+            var tag = tags[i];
+            if (!query.HasCriteria || query.MatchesCriteria(tag)) return tag;
         }
 
         return null;
@@ -65,10 +68,11 @@ public static class ParserTagSearchExtensions
         scope.GetScope(out var tags, out int first, out int end);
         for (int i = first, count = tags.Count; i < count; i++)
         {
-            var tag = tags[i];
-            if (tag.End > end) break;
+            if (tags.Node(i).End > end) break;
+            if (!query.MatchesName(tags.Node(i))) continue;
 
-            if (query.Matches(tag)) yield return tag;
+            var tag = tags[i];
+            if (!query.HasCriteria || query.MatchesCriteria(tag)) yield return tag;
         }
     }
 }

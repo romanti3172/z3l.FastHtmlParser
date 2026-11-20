@@ -10,5 +10,5 @@ public interface ITagSearchable
     /// The tags to search: <paramref name="tags"/>[<paramref name="first"/>..], stopping at the first tag
     /// whose End is greater than <paramref name="end"/>.
     /// </summary>
-    internal void GetScope(out List<ParserTag> tags, out int first, out int end);
+    internal void GetScope(out Core.TagList tags, out int first, out int end);
 }
