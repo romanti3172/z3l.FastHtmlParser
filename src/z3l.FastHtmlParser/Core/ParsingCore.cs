@@ -29,6 +29,29 @@ internal static class ParsingCore
         return map.GetAlternateLookup<ReadOnlySpan<char>>();
     }
 
+    // Attribute name → its static lower-case string, case-insensitive, queried with spans.
+    private static readonly Dictionary<string, string>.AlternateLookup<ReadOnlySpan<char>> AttributeNameLookup = BuildAttributeNameLookup();
+
+    /// <summary>
+    /// The lower-case name of an attribute: the static string for a known name (no allocation), a new one otherwise.
+    /// </summary>
+    internal static string LowerAttributeName(ReadOnlySpan<char> name)
+    {
+        if (AttributeNameLookup.TryGetValue(name, out var known)) return known;
+
+        return string.Create(name.Length, name, static (chars, n) => n.ToLowerInvariant(chars));
+    }
+
+    private static Dictionary<string, string>.AlternateLookup<ReadOnlySpan<char>> BuildAttributeNameLookup()
+    {
+        var map = new Dictionary<string, string>(AttributeNames.Length, IgnoreCaseNameComparer.Instance);
+        foreach (var name in AttributeNames)
+        {
+            map.TryAdd(name, name);
+        }
+        return map.GetAlternateLookup<ReadOnlySpan<char>>();
+    }
+
     // Per-tag data needed while parsing, kept in a pooled struct array:
     // matching a closing tag scans it without touching ParserTag objects.
     private struct TagState

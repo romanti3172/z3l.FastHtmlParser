@@ -165,4 +165,37 @@ public sealed class CoreApiTests
 
         Assert.AreEqual(" tail text", doc.Find(HtmlTag.B).TextAfterTagUntilNextOne());
     }
+
+    [TestMethod]
+    public void Attributes_AllInSourceOrder()
+    {
+        var doc = new HtmlParser("""<A HREF="/x?a=1&amp;b=2" Data-Id=5 title='It&#39;s' disabled ID=1 id=2 empty="">x</A>""");
+
+        var attributes = doc.Find(HtmlTag.A).Attributes();
+
+        CollectionAssert.AreEqual(
+            new[] { "href", "data-id", "title", "disabled", "id", "empty" },
+            attributes.Select(a => a.Name).ToArray());
+        CollectionAssert.AreEqual(
+            new[] { "/x?a=1&b=2", "5", "It's", "", "1", "" },
+            attributes.Select(a => a.Value).ToArray());
+
+        Assert.AreEqual("/x?a=1&amp;b=2", attributes[0].Body);
+        Assert.IsFalse(attributes[3].HasValue);
+        Assert.IsTrue(attributes[5].HasValue);
+
+        var (name, value) = attributes[1];
+        Assert.AreEqual("data-id=5", $"{name}={value}");
+    }
+
+    [TestMethod]
+    public void Attributes_EmptyForNonElements()
+    {
+        var doc = new HtmlParser("<!DOCTYPE html><!-- <b id=1> --><p>x</p>");
+
+        Assert.AreEqual(0, doc.Find(HtmlTag.Doctype).Attributes().Count);
+        Assert.AreEqual(0, doc.Find(HtmlTag.Comment).Attributes().Count);
+        Assert.AreEqual(0, doc.Find(HtmlTag.P).Attributes().Count);
+        Assert.AreEqual(0, ((ParserTag?)null).Attributes().Count);
+    }
 }

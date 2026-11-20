@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `tag.Attributes()`: all attributes of a tag in source order, as a browser reads them: names in lower case, values
+  decoded, a repeated name kept once (the first). Each `TagAttribute` has `Name`, `Value`, `Body` (the value as written)
+  and `HasValue`, and deconstructs: `foreach (var (name, value) in tag.Attributes())`. Known names take no allocation.
+  Cross-checked with AngleSharp on every test page.
+- Forms: `tag.Form()` (a `<form>`, or the form a control belongs to) and `doc.Forms()` give an `HtmlForm` with
+  `Action` (absolute), `Method`, `Enctype`, `Controls()` and `Fields(submitter)`: the name / value pairs a browser sends,
+  ready for `new FormUrlEncodedContent(form.Fields())`. Checked and default values, `select` with and without `multiple`,
+  disabled controls and fieldsets, radio groups, `form="id"` and the clicked submit button (an ASP.NET postback with
+  `__VIEWSTATE`) follow the HTML standard. Cross-checked with AngleSharp's form submission; where AngleSharp differs from
+  the standard (value sanitization, `form="id"` outside the form, CR LF in every value) the standard is followed.
+
 ## 1.4.1 (2026-11-17)
 
 ### Fixed

@@ -135,6 +135,13 @@ public sealed class AngleSharpCrossCheckTests
                         problems.Add($"<{name}>[{i}] @{attribute}: '{Short(value)}' vs '{Short(expectedValue)}'");
                     }
                 }
+
+                var attributes = string.Join(" ", found[i].Attributes().Select(a => $"{a.Name}={a.Value}"));
+                var expectedAttributes = string.Join(" ", expected[i].Attributes.Select(a => $"{a.Name}={a.Value}"));
+                if (attributes != expectedAttributes)
+                {
+                    problems.Add($"<{name}>[{i}] attributes: '{Short(attributes)}' vs '{Short(expectedAttributes)}'");
+                }
             }
         }
 
