@@ -15,6 +15,13 @@
   `__VIEWSTATE`) follow the HTML standard. Cross-checked with AngleSharp's form submission; where AngleSharp differs from
   the standard (value sanitization, `form="id"` outside the form, CR LF in every value) the standard is followed.
 
+## 1.4.2 (2026-11-19)
+
+### Changed
+
+- The license text names every port of the library (C#, Go, Rust, Java, JavaScript / TypeScript, both Python
+  packages, PHP, Ruby, C and C++) and covers their packages on any registry. The terms are unchanged; no code changes.
+
 ## 1.4.1 (2026-11-17)
 
 ### Fixed
