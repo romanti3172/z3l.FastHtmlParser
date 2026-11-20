@@ -44,7 +44,7 @@ public sealed class XPathTests
     public static IEnumerable<object[]> NodeSetExpressions =>
         new[]
         {
-            "//div", "//DIV", "/html/body/div[2]/h2", "//body/*[3]", "//*",
+            "//div", "//DIV", "/html/body/div[2]/h2", "//body/*[3]", "//*", "//div/./span", "//./li[1]", "/html/./body/.", "(//span)/.", "//div/self::node()[@class]", "//ul/./li[2]",
             "//div[@class='card']", "//div[@class!='card']", "//div[contains(@class,'featured')]",
             "//span[@class='price']", "//span[@class='price'][2]", "//*[@rel]", "//*[not(@rel)]",
             "//div/span[1]", "//div/span[last()]", "(//span)[2]", "(//span)[last()]", "//li[1]", "//ul//li[1]",
@@ -63,7 +63,38 @@ public sealed class XPathTests
             "//span[. = //h2[.='Alpha']/../span]", "//div[span = 5]", "//span[@class='price' and . >= 10]",
             "//span[@class='price old' or . = '25']", "//*[@id = 'b' or @id = 'title']", "//div[-1 + 3]",
             "//*[contains(concat(' ', normalize-space(@class), ' '), ' price ')]",
+            // attribute string tests evaluated in place (AttributeStringTestExpr), incl. a missing attribute
+            "//*[contains(concat(' ', @class, ' '), ' price ')]", "//*[contains(concat(' ', @class, ' '), ' card ')]",
+            "//*[contains(concat(' ', @class, ' '), '  ')]", "//*[contains(concat('', @class, ''), '')]",
+            "//*[contains(@class, 'ce o')]", "//*[starts-with(@class, 'price')]", "//*[starts-with(concat('x', @rel), 'x')]",
+            "//*[not(contains(concat(' ', @class, ' '), ' price '))]",
         }.Select(x => new object[] { x });
+
+    // The in-place attribute tests give what the general function calls give (string(@a) is not a bare @a, so it is
+    // evaluated as a plain call): entities, a long value past the stack buffer, a missing attribute, ends-with.
+    [TestMethod]
+    [DataRow("contains(concat(' ', {0}, ' '), ' b ')")]
+    [DataRow("contains(concat(' ', {0}, ' '), ' a&b ')")]
+    [DataRow("contains(concat(' ', {0}, ' '), ' last ')")]
+    [DataRow("contains({0}, 'b x')")]
+    [DataRow("starts-with({0}, 'a')")]
+    [DataRow("ends-with({0}, 'last')")]
+    [DataRow("ends-with(concat({0}, '!'), 't!')")]
+    [DataRow("contains(concat(' ', {0}, ' '), '  ')")]
+    public void AttributeStringTests_SameAsFunctionCalls(string template)
+    {
+        var html = $"""
+            <i id="1" class="a b"></i><i id="2" class="a&amp;b x"></i><i id="3"></i><i id="4" class></i>
+            <i id="5" class="{string.Join(' ', Enumerable.Repeat("filler", 60))} last"></i><i id="6" class="b"></i>
+            """;
+        var document = new HtmlParser(html);
+
+        string[] Ids(string predicate) => document.XPath($"//i[{predicate}]").Select(t => t.AttributeByName(HtmlAttribute.Id)!).ToArray();
+
+        var fast = Ids(string.Format(CultureInfo.InvariantCulture, template, "@class"));
+        var general = Ids(string.Format(CultureInfo.InvariantCulture, template, "string(@class)"));
+        CollectionAssert.AreEqual(general, fast, $"{template}: [{string.Join(", ", general)}] / [{string.Join(", ", fast)}]");
+    }
 
     [TestMethod]
     [DynamicData(nameof(NodeSetExpressions))]
