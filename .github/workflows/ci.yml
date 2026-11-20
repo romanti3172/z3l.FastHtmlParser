@@ -13,6 +13,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # The tests take about a minute: a hang must not hold the job for the default 6 hours.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
         with:
@@ -25,8 +27,12 @@ jobs:
             10.0.x
 
       # The test project targets net9.0 and net10.0: both builds of the library are tested.
+      # Every test is listed; a test that runs longer than 5 minutes is stopped and named in the log.
       - name: Test
-        run: dotnet test tests/z3l.FastHtmlParser.Tests -c Release
+        run: >-
+          dotnet test tests/z3l.FastHtmlParser.Tests -c Release
+          --logger "console;verbosity=normal"
+          --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none
 
       # Version comes from the tag: v0.1.0 -> 0.1.0. Untagged builds keep the version of src/Directory.Build.props.
       # Both packages get the same version; z3l.FastHtmlParser.HtmlToMarkdown depends on z3l.FastHtmlParser of it.
