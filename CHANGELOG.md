@@ -1,6 +1,8 @@
 # Changelog
 
-## 1.6.0 (2026-11-20)
+## 1.6.1 (2026-11-20)
+
+The first release with HTML to Markdown; 1.6.0 was tagged but never published.
 
 ### Added
 
