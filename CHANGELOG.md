@@ -11,6 +11,8 @@
   inside the declaration: absolute XPath (`/urlset/url/loc`, `/html/body/p`) and `:root` found nothing, and
   `Markdown()` of an XHTML page or a sitemap was empty; in HTML, `<?foo?>` or `<![if ...]>` made the following
   siblings its children (`body > p`, `head > title` missed them).
+- The error of an XPath cut short (`//a[`) says "unexpected end of the expression", not "unexpected the end of the
+  expression".
 
 ## 1.6.1 (2026-11-20)
 

@@ -394,7 +394,8 @@ internal sealed class XPathCompiler
         }
         else
         {
-            if (!CanStartStep(Peek())) throw Error($"unexpected {Describe(Peek())}");
+            if (!CanStartStep(Peek()))
+                throw Error(Peek().Kind == T.End ? "unexpected end of the expression" : $"unexpected {Describe(Peek())}");
             ParseRelativeSteps(steps, afterSlash: false);
         }
 

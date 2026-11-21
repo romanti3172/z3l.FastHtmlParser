@@ -399,6 +399,13 @@ public sealed class XPathTests
     }
 
     [TestMethod]
+    public void ExpressionCutShort_SaysUnexpectedEnd()
+    {
+        var e = Assert.ThrowsExactly<ArgumentException>(() => new HtmlParser(Xhtml).XPath("//a["));
+        StringAssert.Contains(e.Message, "unexpected end of the expression");
+    }
+
+    [TestMethod]
     public void ScalarExpressionForTags_Throws()
     {
         Assert.ThrowsExactly<ArgumentException>(() => new HtmlParser(Xhtml).XPath("count(//a)"));
