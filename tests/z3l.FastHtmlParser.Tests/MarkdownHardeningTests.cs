@@ -14,40 +14,45 @@ public sealed class MarkdownHardeningTests
     private static string Repeat(string s, int count) => new StringBuilder(s.Length * count).Insert(0, s, count).ToString();
 
     /// <summary>Markup on which a naive conversion takes quadratic time, recursion as deep as the page, or megabytes of padding.</summary>
-    public static IEnumerable<object[]> HostileMarkup =>
-    [
-        ["deep quotes", Repeat("<blockquote>", Many) + "x" + Repeat("</blockquote>", Many)],
-        ["deep lists", Repeat("<ul><li>", Many) + "x"],
-        ["deep lists with text", Repeat("<ol start=999999999><li>a", Many)],
-        ["deep definitions", Repeat("<dl><dd>a", Many)],
-        ["deep bold", Repeat("<b>", Many) + "x" + Repeat("</b>", Many)],
-        ["deep divs", Repeat("<div>", Many) + "x" + Repeat("</div>", Many)],
-        ["headings in headings", Repeat("<h1>", Many) + "x"],
-        ["pairs over many blocks", "<b><i><del><q><sub><sup><a href=x>" + Repeat("<p>a</p>", Many)],
-        ["unclosed links", Repeat("<a href=x>y", Many)],
-        ["line breaks", Repeat("<br>", Many) + "x" + Repeat("<p><br>a<br></p>", Many)],
-        ["stray end tags", Repeat("</div></p></b>", Many)],
-        ["special chars", Repeat("&amp;*_[]`<~|\\#-+>1.", Many)],
-        ["special chars at block starts", Repeat("<p># - + > 1. ===</p><li>---</li>", Many)],
-        ["code spans", Repeat("<code>`</code><code>a|b</code>", Many)],
-        ["long runs of backticks", "<code>" + Repeat("`", Many) + "</code><pre>" + Repeat("`", Many) + "\n" + Repeat("`\n", Many) + "</pre>"],
-        ["pre in pre", Repeat("<pre>", Many) + "x"],
-        ["a table per cell", Repeat("<table><tr><td>", Many / 4) + "x"],
-        ["many rows", "<table>" + Repeat("<tr><td>a<td>b", Many) + "</table>"],
-        ["wide cells", Repeat("<table><tr><td colspan=1000>a<td>b</table>", Many / 10)],
-        ["wide and tall cells", "<table><tr>" + Repeat("<td rowspan=65534 colspan=1000>a", 50) + Repeat("<tr><td>c", Many) + "</table>"],
-        ["a tall cell in every row", "<table>" + Repeat("<tr><td rowspan=65534>a<td>b", Many / 10) + "</table>"],
-        ["rows of growing width", "<table>" + string.Concat(Enumerable.Range(1, 400).Select(n => "<tr>" + Repeat("<td>a", n))) + "</table>"],
-        ["lists in cells", "<table><tr><td>a<td>" + Repeat("<ul><li>x", Many / 10) + "</table>"],
-        ["captions", "<table>" + Repeat("<caption>c</caption>", Many) + "<tr><td>a<td>b</table>"],
-        ["images", Repeat("<img src='a b(c' alt='[x]' title='\"t\"'>", Many)],
-        ["long attribute values", "<a href=\"" + Repeat("a(", Many) + "\" title=\"" + Repeat("\"\\", Many) + "\">x</a>"],
-    ];
+    private static readonly Dictionary<string, Func<string>> Hostile = new()
+    {
+        ["deep quotes"] = () => Repeat("<blockquote>", Many) + "x" + Repeat("</blockquote>", Many),
+        ["deep lists"] = () => Repeat("<ul><li>", Many) + "x",
+        ["deep lists with text"] = () => Repeat("<ol start=999999999><li>a", Many),
+        ["deep definitions"] = () => Repeat("<dl><dd>a", Many),
+        ["deep bold"] = () => Repeat("<b>", Many) + "x" + Repeat("</b>", Many),
+        ["deep divs"] = () => Repeat("<div>", Many) + "x" + Repeat("</div>", Many),
+        ["headings in headings"] = () => Repeat("<h1>", Many) + "x",
+        ["pairs over many blocks"] = () => "<b><i><del><q><sub><sup><a href=x>" + Repeat("<p>a</p>", Many),
+        ["unclosed links"] = () => Repeat("<a href=x>y", Many),
+        ["line breaks"] = () => Repeat("<br>", Many) + "x" + Repeat("<p><br>a<br></p>", Many),
+        ["stray end tags"] = () => Repeat("</div></p></b>", Many),
+        ["special chars"] = () => Repeat("&amp;*_[]`<~|\\#-+>1.", Many),
+        ["special chars at block starts"] = () => Repeat("<p># - + > 1. ===</p><li>---</li>", Many),
+        ["code spans"] = () => Repeat("<code>`</code><code>a|b</code>", Many),
+        ["long runs of backticks"] = () => "<code>" + Repeat("`", Many) + "</code><pre>" + Repeat("`", Many) + "\n" + Repeat("`\n", Many) + "</pre>",
+        ["pre in pre"] = () => Repeat("<pre>", Many) + "x",
+        ["a table per cell"] = () => Repeat("<table><tr><td>", Many / 4) + "x",
+        ["many rows"] = () => "<table>" + Repeat("<tr><td>a<td>b", Many) + "</table>",
+        ["wide cells"] = () => Repeat("<table><tr><td colspan=1000>a<td>b</table>", Many / 10),
+        ["wide and tall cells"] = () => "<table><tr>" + Repeat("<td rowspan=65534 colspan=1000>a", 50) + Repeat("<tr><td>c", Many) + "</table>",
+        ["a tall cell in every row"] = () => "<table>" + Repeat("<tr><td rowspan=65534>a<td>b", Many / 10) + "</table>",
+        ["rows of growing width"] = () => "<table>" + string.Concat(Enumerable.Range(1, 400).Select(n => "<tr>" + Repeat("<td>a", n))) + "</table>",
+        ["lists in cells"] = () => "<table><tr><td>a<td>" + Repeat("<ul><li>x", Many / 10) + "</table>",
+        ["captions"] = () => "<table>" + Repeat("<caption>c</caption>", Many) + "<tr><td>a<td>b</table>",
+        ["images"] = () => Repeat("<img src='a b(c' alt='[x]' title='\"t\"'>", Many),
+        ["long attribute values"] = () => "<a href=\"" + Repeat("a(", Many) + "\" title=\"" + Repeat("\"\\", Many) + "\">x</a>",
+    };
+
+    // Only the names are test data: megabytes of markup in the arguments of a test hung the test run on the
+    // Linux CI runner (they are escaped into its display name and sent between the test processes).
+    public static IEnumerable<object[]> HostileMarkup => Hostile.Keys.Select(name => new object[] { name });
 
     [TestMethod]
     [DynamicData(nameof(HostileMarkup))]
-    public void HostileMarkup_IsConvertedInLinearTime(string name, string html)
+    public void HostileMarkup_IsConvertedInLinearTime(string name)
     {
+        string html = Hostile[name]();
         var doc = new HtmlParser(html);
 
         // Milliseconds when linear, under a second on a slow CI runner; the test does not wait for a quadratic run
