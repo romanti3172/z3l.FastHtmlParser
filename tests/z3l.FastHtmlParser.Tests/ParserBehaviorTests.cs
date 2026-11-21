@@ -66,6 +66,90 @@ public sealed class ParserBehaviorTests
         Assert.IsFalse(doc.FindByName(HtmlTag.Img)!.HasChildren());
     }
 
+    // Markup whose name starts with '!' or '?' contains nothing, in HTML (a bogus comment in a browser) and in XML
+    // (a declaration or processing instruction is a leaf): it does not nest the following tags, no end tag is matched to it.
+
+    [TestMethod]
+    public void XmlDeclaration_DoesNotNestTheDocument()
+    {
+        var doc = new HtmlParser("""<?xml version="1.0" encoding="UTF-8"?><urlset><url><loc>a</loc></url><url><loc>b</loc></url></urlset>""");
+        var declaration = doc.FindByName(HtmlTag.XmlDeclaration)!;
+        var urlset = doc.Find("urlset")!;
+
+        Assert.IsFalse(declaration.HasChildren());
+        Assert.IsEmpty(declaration.Children());
+        Assert.IsNull(urlset.Parent());
+        Assert.AreEqual(0, urlset.Depth);
+        Assert.AreEqual(2, doc.Find("loc")!.Depth);
+        CollectionAssert.AreEqual(new[] { "a", "b" }, doc.XPath("/urlset/url/loc").Select(t => t.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "a", "b" }, doc.Css("urlset > url > loc").Select(t => t.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "urlset" }, doc.Css(":root").Select(t => t.Name).ToArray());
+        Assert.HasCount(2, doc.XPath("//loc"));
+    }
+
+    [TestMethod]
+    public void XhtmlDeclarationAndDoctype_DoNotNestTheDocument()
+    {
+        var doc = new HtmlParser("""<?xml version="1.0"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html><head><title>t</title></head><body><p>a</p></body></html>""");
+        var html = doc.FindByName(HtmlTag.Html)!;
+
+        Assert.IsNull(doc.FindByName(HtmlTag.Doctype)!.Parent());
+        Assert.IsFalse(doc.FindByName(HtmlTag.Doctype)!.HasChildren());
+        Assert.IsFalse(doc.FindByName(HtmlTag.XmlDeclaration)!.HasChildren());
+        Assert.IsNull(html.Parent());
+        Assert.AreEqual(0, html.Depth);
+        CollectionAssert.AreEqual(new[] { "head", "body" }, html.Children().Select(t => t.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "a" }, doc.XPath("/html/body/p").Select(t => t.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "t" }, doc.XPath("/html/head/title").Select(t => t.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "a" }, doc.Css("html > body > p").Select(t => t.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "html" }, doc.Css(":root").Select(t => t.Name).ToArray());
+    }
+
+    [TestMethod]
+    public void DownlevelRevealedConditionals_DoNotNestTheFollowingTags()
+    {
+        var doc = new HtmlParser("""<html><head><![if !IE]><link rel="stylesheet" href="a.css"><![endif]><title>x</title></head><body></body></html>""");
+        var head = doc.FindByName(HtmlTag.Head)!;
+
+        CollectionAssert.AreEqual(new[] { "![if", "link", "![endif]", "title" }, head.Children().Select(t => t.Name).ToArray());
+        Assert.IsTrue(head.Children().All(t => !t.HasChildren()));
+        Assert.AreSame(head, doc.FindByName(HtmlTag.Link)!.Parent());
+        Assert.AreSame(head, doc.FindByName(HtmlTag.Title)!.Parent());
+        Assert.AreEqual(2, doc.FindByName(HtmlTag.Title)!.Depth);
+        CollectionAssert.AreEqual(new[] { "x" }, doc.Css("head > title").Select(t => t.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "x" }, doc.XPath("/html/head/title").Select(t => t.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "a.css" }, doc.XPath("/html/head/link").Select(t => t.AttributeByName(HtmlAttribute.Href)).ToArray());
+    }
+
+    [TestMethod]
+    public void ProcessingInstruction_InHtml_DoesNotNestTheFollowingTags()
+    {
+        var doc = new HtmlParser("<html><body><p>a</p><?foo bar?><p>b</p><p>c</p></body></html>");
+        var body = doc.FindByName(HtmlTag.Body)!;
+
+        Assert.IsFalse(doc.Find("?foo")!.HasChildren());
+        Assert.AreSame(body, doc.Find("?foo")!.Parent());
+        Assert.IsTrue(doc.FindAll(HtmlTag.P).All(p => ReferenceEquals(p.Parent(), body) && p.Depth == 2));
+        CollectionAssert.AreEqual(new[] { "a", "b", "c" }, doc.Css("body > p").Select(t => t.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "a", "b", "c" }, doc.XPath("/html/body/p").Select(t => t.Text()).ToArray());
+        CollectionAssert.AreEqual(new[] { "html" }, doc.Css(":root").Select(t => t.Name).ToArray());
+    }
+
+    [TestMethod]
+    [DataRow("<div><?php echo 1; ?><p>a</p></?php></div><p>b</p>")]
+    [DataRow("<?xml version=\"1.0\"?><r><?xml-stylesheet href=\"s.xsl\"?><p>a</p></?xml-stylesheet></r><p>b</p>")]
+    [DataRow("<div><!ELEMENT x ANY><p>a</p></!ELEMENT></div><p>b</p>")]
+    public void BangAndQuestionMarkup_IsNotMatchedToAnEndTag(string html)
+    {
+        var doc = new HtmlParser(html);
+        var paragraphs = doc.FindAll(HtmlTag.P).ToList();
+
+        Assert.HasCount(2, paragraphs);
+        Assert.AreEqual(1, paragraphs[0].Depth); // in the <div> / <r>, not inside the "?..." / "!..." tag
+        Assert.AreEqual(0, paragraphs[1].Depth);
+        Assert.IsTrue(doc.Where(t => t.Name![0] is '!' or '?').All(t => !t.HasChildren()));
+    }
+
     [TestMethod]
     public void XmlDocuments_FollowXmlRules()
     {

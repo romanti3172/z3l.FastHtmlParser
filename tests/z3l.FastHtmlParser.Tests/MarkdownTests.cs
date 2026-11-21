@@ -25,6 +25,17 @@ public sealed class MarkdownTests
         Assert.AreEqual(expected, HtmlText.ToMarkdown(html));
     }
 
+    // The declaration, doctype, processing instructions and conditionals are leaves: the page is not inside a skipped tag.
+    [TestMethod]
+    [DataRow("<?xml version=\"1.0\"?><!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"x\"><html><head><title>t</title></head><body><h1>Head</h1><p>a <b>b</b></p></body></html>", "# Head\n\na **b**")]
+    [DataRow("<?xml version=\"1.0\"?><urlset><url><loc>a</loc></url></urlset>", "a")]
+    [DataRow("<html><head><![if !IE]><link rel=\"stylesheet\" href=\"a.css\"><![endif]><title>x</title></head><body><p>t</p><?php echo 1; ?><p>u</p></body></html>", "t\n\nu")]
+    public void Declarations_DoNotHideThePage(string html, string expected)
+    {
+        Assert.AreEqual(expected, HtmlText.ToMarkdown(html));
+        Assert.AreEqual(expected, new HtmlParser(html).Markdown());
+    }
+
     [TestMethod]
     [DataRow("<h1>Title</h1><h2>Sub</h2><h6>Six</h6>text", "# Title\n\n## Sub\n\n###### Six\n\ntext")]
     [DataRow("<h1>a<br>b</h1>", "# a b")]                                   // a heading is one line

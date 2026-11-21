@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Markup whose name starts with `!` or `?` no longer contains the tags after it, in HTML and in XML documents: the
+  XML declaration, `<!DOCTYPE>` of an XHTML page, processing instructions (`<?php ... ?>`, `<?xml-stylesheet ...?>`)
+  and downlevel-revealed conditionals (`<![if !IE]>`, `<![endif]>`) are leaves, as a browser and an XML parser read
+  them, and no end tag is matched to them. Before, in a document that starts with `<?xml` the whole document was
+  inside the declaration: absolute XPath (`/urlset/url/loc`, `/html/body/p`) and `:root` found nothing, and
+  `Markdown()` of an XHTML page or a sitemap was empty; in HTML, `<?foo?>` or `<![if ...]>` made the following
+  siblings its children (`body > p`, `head > title` missed them).
+
 ## 1.6.1 (2026-11-20)
 
 The first release with HTML to Markdown; 1.6.0 was tagged but never published.

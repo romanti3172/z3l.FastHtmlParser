@@ -409,9 +409,13 @@ internal static class ParsingCore
 
                     tags[count] = new TagNode(parentIndex, key, htmlTagString, tagStartPosition - 1, i, i + 1, level);
 
-                    // Void elements (<br>, <img>, <meta>, ...) and declarations (<!doctype>) never contain anything:
-                    // they do not nest the following tags and no end tag is matched to them.
-                    bool isVoid = !isXml && key >= 0 && VoidTags[key];
+                    // Void elements (<br>, <img>, <meta>, ...) never contain anything: they do not nest the following
+                    // tags and no end tag is matched to them. Neither does any markup whose name starts with '!' or '?'
+                    // (<!doctype>, <?xml ...?>, <?php ...?>, <![if IE]>, <!ELEMENT ...>), in HTML and in XML alike:
+                    // a bogus comment in a browser, a declaration or processing instruction in XML.
+                    // The name's first char is an ASCII letter, '!' or '?' (IsMarkupStart; '/' is an end tag),
+                    // and both '!' and '?' sort before the letters: one compare.
+                    bool isVoid = pagesource[tagStartPosition] <= '?' || (!isXml && key >= 0 && VoidTags[key]);
 
                     // Проверка на самозакрытие без аллокаций
                     var trimmedSource = tagsource.TrimEnd();
@@ -749,7 +753,8 @@ internal static class ParsingCore
         return rules;
     }
 
-    // HTML5 void elements (incl. obsolete ones the parsing rules also treat as void) and declarations.
+    // HTML5 void elements (incl. obsolete ones the parsing rules also treat as void) and declarations
+    // (the scan ends every "!..." / "?..." tag by its first char anyway, in XML too).
     private static readonly bool[] VoidTags = BuildVoidTags();
 
     private static bool[] BuildVoidTags()
