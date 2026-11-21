@@ -891,6 +891,14 @@ internal static class ParsingCore
 
     private static readonly LineBreakKind[] LineBreakKinds = BuildLineBreakKinds();
 
+    /// <summary>
+    /// Whether the tag separates words in the one-line visible text (<c>Text()</c>, as jsoup's <c>text()</c>): &lt;br&gt;,
+    /// block elements, p/h1–h6 and table cells, opening or closing. Inline and unknown tags do not ("a&lt;b&gt;b&lt;/b&gt;" is
+    /// one word). The same tags as the line breaks of <c>TextLineBreaks()</c>.
+    /// </summary>
+    internal static bool SeparatesWords(HtmlTag tag) =>
+        LineBreakKinds[(int)tag] is LineBreakKind.Line or LineBreakKind.Paragraph or LineBreakKind.Space;
+
     private static LineBreakKind[] BuildLineBreakKinds()
     {
         var kinds = new LineBreakKind[TagNames.Length];

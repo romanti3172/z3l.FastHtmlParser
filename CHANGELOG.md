@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Changed
+
+- `Text()` is the visible text in one line, as jsoup's `text()`: `<br>`, block elements (`p`, `div`, `li`, `tr`,
+  `h1`-`h6`, ...) and table cells separate words, inline tags do not. `"line1<br>line2"` is `"line1 line2"` (was
+  `"line1line2"`), a table row `<td>Price</td><td>100</td>` is `"Price 100"` (was `"Price100"`), `"a<b>b</b>"` is still
+  `"ab"`. Whitespace and line breaks collapse to one space also in a tag without child tags (`<span>a
+  b</span>` is
+  `"a b"`, was `"a
+  b"`); inside `<pre>`, `<listing>`, `<plaintext>` whitespace is kept, as in jsoup, and `textarea`,
+  `script`, `style`, `title` are their content as written. `IsText`, `HtmlText.ToText`, XPath string-values,
+  `:contains()` and `text:` in queries read the same text. Most HTML libraries (AngleSharp, HtmlAgilityPack,
+  BeautifulSoup, lxml, cheerio) join the text nodes as they are (`"line1line2"`); jsoup was the one that separates.
+  Cost: `Text()` of a large element or a table about 20-50% more time (a tag lookup after each word); the scrape
+  benchmarks did not change.
+
 ### Fixed
 
 - Markup whose name starts with `!` or `?` no longer contains the tags after it, in HTML and in XML documents: the

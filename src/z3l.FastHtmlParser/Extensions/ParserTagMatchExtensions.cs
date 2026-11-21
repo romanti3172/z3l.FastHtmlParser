@@ -117,6 +117,13 @@ public static class ParserTagMatchExtensions
 
         if (value.IsEmpty || string.IsNullOrEmpty(expected)) return false;
 
+        // <pre> keeps its whitespace in Text(): compare with Text() itself (rare, so the slow way)
+        if (ParsingCore.IsRawText(tag!.Key)
+            || (tag.Document.HasPre && (value.Contains("<pre", StringComparison.OrdinalIgnoreCase) || ParserTagExtensions.InPre(tag))))
+        {
+            return string.Equals(tag.Text(), expected, StringComparison.Ordinal);
+        }
+
         int matched = 0;
         bool prevWhitespace = true;   // left trim
         bool pendingSpace = false;    // a collapsed space counts only if more text follows (right trim)
@@ -127,9 +134,15 @@ public static class ParserTagMatchExtensions
 
             if (c == '<' && HtmlToTextCore.IsMarkupStart(value, i))
             {
-                // tags, comments and invisible content (script, style, ...) are not text
+                // tags, comments and invisible content (script, style, ...) are not text;
+                // <br>, blocks and cells separate words, as in Text()
                 int last = HtmlToTextCore.SkipMarkup(value, i);
                 if (last < 0) break;
+                if (!prevWhitespace && HtmlToTextCore.SeparatesWords(value, i))
+                {
+                    pendingSpace = true;
+                    prevWhitespace = true;
+                }
                 i = last;
             }
             else if (char.IsWhiteSpace(c))

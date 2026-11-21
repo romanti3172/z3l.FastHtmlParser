@@ -197,6 +197,29 @@ public class HtmlParser : IEnumerable<ParserTag>, ITagSearchable, IDisposable
         }
     }
 
+    // 0: not looked up yet, 1: no <pre> (nor listing, plaintext) in the page, 2: there is one. Most pages have none,
+    // and then Text() does not look for one around each tag. A race only computes the same answer twice.
+    private int _hasPre;
+
+    /// <summary>Whether the page has a &lt;pre&gt;, &lt;listing&gt; or &lt;plaintext&gt;: their text keeps its whitespace.</summary>
+    internal bool HasPre
+    {
+        get
+        {
+            if (_hasPre == 0)
+            {
+                var data = Data;
+                bool found = false;
+                for (int i = 0; i < data.Count && !found; i++)
+                {
+                    found = data.Node(i).Key is (int)HtmlTag.Pre or (int)HtmlTag.Listing or (int)HtmlTag.Plaintext;
+                }
+                _hasPre = found ? 2 : 1;
+            }
+            return _hasPre == 2;
+        }
+    }
+
     // Every search, navigation and text method of the document and of its tags reads the tag list or the source
     // through these properties, so after Dispose all of them fail the same way.
     internal TagList Data

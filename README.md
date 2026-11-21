@@ -11,8 +11,9 @@ Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 
   (about 250 values each: HTML, SVG, MathML, RSS, Atom, sitemap) or plain strings.
 - **HTML5 entities.** All 2125 named references, legacy names without `;`, numeric references —
   decoded the way browsers do.
-- **Text extraction.** `Text()` gives clean text; `TextLineBreaks()` keeps the visible line
-  structure (`<br>`, `<p>`, `<li>`, `<div>`...).
+- **Text extraction.** `Text()` gives the visible text in one line, as jsoup's `text()`: `<br>`, blocks and table
+  cells separate words (`Price<br>100`, `<td>Price</td><td>100</td>` → `Price 100`); `TextLineBreaks()` keeps the visible
+  line structure (`<br>`, `<p>`, `<li>`, `<div>`...).
 - **HTML to Markdown.** `Markdown()` gives a page or any tag as Markdown: headings, lists, links, tables,
   code blocks. 10–20x faster than ReverseMarkdown and Html2Markdown on typical pages, with 37–62x less memory.
 - **XPath 1.0.** `doc.XPath("//div[@class='card']/a")`, `doc.XPathValues("//a/@href")`, compiled and cached.
@@ -97,7 +98,7 @@ so the core API stays small unless you import them.
 
 ```csharp
 tag.Name;              // "div"
-tag.Text();            // visible text, entities decoded
+tag.Text();            // visible text in one line, entities decoded: "a<br>b" → "a b", "a<b>b</b>" → "ab"
 tag.TextLineBreaks();  // text with line breaks: <br>, block elements → new line, <p> → paragraph
 tag.Body();            // inner HTML
 tag.FullSource();      // outer HTML
@@ -176,7 +177,8 @@ page.XPathValues(Titles);
 
 All axes (except namespace), predicates, `|`, operators and the XPath 1.0 functions are supported,
 plus `ends-with()`, `lower-case()` and `upper-case()`. HTML rules apply: names are case-insensitive, entities
-are decoded, and the string-value of an element is its `Text()` (whitespace collapsed, script/style dropped).
+are decoded, and the string-value of an element is its `Text()` (one line: `<br>`, blocks and cells separate words,
+whitespace collapsed, script/style dropped; lxml and HtmlAgilityPack join the text nodes as they are).
 `//name` and `[@attr='value']` run as a linear scan of the tag list with in-place attribute comparison.
 String expressions are compiled once and cached; an invalid expression throws `ArgumentException`
 with the position of the error.
@@ -299,6 +301,9 @@ The parser builds a flat list of tags, not a full DOM, and follows the HTML rule
 - Void elements (`img`, `br`, `meta`, `link`, `input`, `hr`, ...) and `<!doctype>` never contain other tags.
 - `Text()`, `IsText` and `TextLineBreaks()` return the visible text: comments and the content of `script`, `style`,
   `noscript`, `template`, `noframes`, `noembed` are skipped (`Text()` of a `<script>` itself still gives its code).
+  `Text()` is one line, as jsoup's `text()`: `<br>`, block elements (`p`, `div`, `li`, `tr`, `h1`...) and table cells
+  separate words, inline tags (`b`, `span`, `a`) do not, whitespace and line breaks collapse to one space; inside
+  `<pre>` whitespace is kept.
   `Markdown()` also leaves out `head`, `svg` and form controls.
 - Optional end tags work as in HTML5: a new `<li>` ends an open `<li>`, `<td>`/`<tr>` end open cells and rows,
   `<dt>`/`<dd>` and `<option>` end their open siblings, a block element (`<div>`, `<ul>`, `<table>`, ...) ends an open `<p>`.

@@ -150,8 +150,25 @@ public sealed class AngleSharpCrossCheckTests
 
     private static readonly HashSet<string> Invisible = ["script", "style", "noscript", "template", "noframes", "noembed"];
 
-    /// <summary>TextContent without the content of invisible elements (script, style, ...): what Text() returns.</summary>
-    private static string VisibleText(INode node)
+    /// <summary>
+    /// Elements that separate words in Text(), as in jsoup's text(): &lt;br&gt;, block elements, p/h1–h6, table cells.
+    /// Written out here (not taken from the library) so that the check stays independent.
+    /// </summary>
+    internal static readonly HashSet<string> SeparateWords =
+    [
+        "br", "p", "h1", "h2", "h3", "h4", "h5", "h6", "div", "li", "ul", "ol", "dl", "dt", "dd",
+        "table", "caption", "tr", "thead", "tbody", "tfoot", "td", "th",
+        "section", "article", "aside", "nav", "header", "footer", "main", "address", "blockquote", "pre", "hr",
+        "figure", "figcaption", "form", "fieldset", "legend", "details", "summary", "dialog", "option",
+        "html", "head", "body", "title", "hgroup", "search", "menu", "center", "dir", "listing", "xmp", "plaintext",
+        "multicol", "frameset", "marquee",
+    ];
+
+    /// <summary>
+    /// What Text() returns, from AngleSharp's DOM: the text nodes without the content of invisible elements (script,
+    /// style, ...), with a space around the elements that separate words (<see cref="SeparateWords"/>).
+    /// </summary>
+    internal static string VisibleText(INode node)
     {
         var sb = new StringBuilder();
         Append(node);
@@ -162,7 +179,13 @@ public sealed class AngleSharpCrossCheckTests
             foreach (var child in current.ChildNodes)
             {
                 if (child is IText text) sb.Append(text.Data);
-                else if (child is IElement element && !Invisible.Contains(element.LocalName)) Append(element);
+                else if (child is IElement element && !Invisible.Contains(element.LocalName))
+                {
+                    bool separates = SeparateWords.Contains(element.LocalName);
+                    if (separates) sb.Append(' ');
+                    Append(element);
+                    if (separates) sb.Append(' ');
+                }
             }
         }
     }
