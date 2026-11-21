@@ -50,15 +50,16 @@ public sealed class MarkdownHardeningTests
     {
         var doc = new HtmlParser(html);
 
-        // milliseconds when linear; the test does not wait for a quadratic run to finish
-        var converting = Task.Run(() => doc.Markdown()!);
-        if (!converting.Wait(TimeSpan.FromSeconds(20))) Assert.Fail($"not converted in 20 s: {name}");
-        string markdown = converting.Result;
+        // Milliseconds when linear, under a second on a slow CI runner; the test does not wait for a quadratic run
+        // to finish. Both conversions are timed: a quadratic table scan once took 7 s here and hung the CI runner.
+        var converting = Task.Run(() => (doc.Markdown()!, doc.Markdown()!));
+        if (!converting.Wait(TimeSpan.FromSeconds(5))) Assert.Fail($"not converted twice in 5 s: {name}");
+        var (markdown, again) = converting.Result;
 
         // What a page can grow by most is the prefix of nested quotes and lists, at most 64 chars before every line,
         // also before the blank line between two paragraphs: some 130 chars for "<p>x".
         Assert.IsLessThanOrEqualTo(40L * html.Length + 4096, (long)markdown.Length, $"{name}: {html.Length} chars of HTML gave {markdown.Length} of Markdown");
-        Assert.AreEqual(markdown, doc.Markdown(), name);
+        Assert.AreEqual(markdown, again, name);
     }
 
     [TestMethod]

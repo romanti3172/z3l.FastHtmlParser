@@ -303,7 +303,11 @@ internal ref partial struct MarkdownConverter
             var kind = MarkdownKinds.Of[key];
             if (kind == MdKind.Inline) continue;
 
-            if (scan.RowOpen && node.Start > scan.RowEnd && node.Start > cellEnd) EndScanRow(ref scan);
+            if (scan.RowOpen && node.Start > scan.RowEnd && node.Start > cellEnd && !EndScanRow(ref scan))
+            {
+                ClearCovered();
+                return false;
+            }
 
             switch (kind)
             {
@@ -317,7 +321,11 @@ internal ref partial struct MarkdownConverter
 
                 case MdKind.TableRow:
                     if (node.Start < cellEnd) break;
-                    if (scan.RowOpen) EndScanRow(ref scan);
+                    if (scan.RowOpen && !EndScanRow(ref scan))
+                    {
+                        ClearCovered();
+                        return false;
+                    }
 
                     BeginScanRow(ref scan, node.InnerStart > 0 && node.InnerEnd > 0 ? node.End : end);
                     scan.RowInHead = node.ParentIndex >= 0 && data.Node(node.ParentIndex).Key == (int)HtmlTag.Thead;
@@ -361,18 +369,15 @@ internal ref partial struct MarkdownConverter
             }
         }
 
-        if (scan.RowOpen) EndScanRow(ref scan);
+        bool fits = !scan.RowOpen || EndScanRow(ref scan);
         ClearCovered();
 
-        if (scan.Columns < 2 || (scan.Rows == 1 && !scan.HeaderRow && scan.Blocks)) return false;
+        if (!fits || scan.Columns < 2 || (scan.Rows == 1 && !scan.HeaderRow && scan.Blocks)) return false;
 
         var role = Attribute(in table, "role").Trim();
         if (role.Equals("presentation", StringComparison.OrdinalIgnoreCase) || role.Equals("none", StringComparison.OrdinalIgnoreCase)) return false;
 
-        long empty = (long)scan.Rows * scan.Columns - scan.Cells;
-        long cost = empty * 3 + scan.Columns * 12L;
-        if (cost > _padBudget) return false;
-        _padBudget -= cost;
+        _padBudget -= PaddingCost(in scan);
 
         _table = new TableState { End = end, Columns = scan.Columns, HeaderRow = scan.HeaderRow, Spans = scan.Spans };
         return true;
@@ -388,7 +393,13 @@ internal ref partial struct MarkdownConverter
         scan.RowAllHeadings = true;
     }
 
-    private void EndScanRow(ref TableScan scan)
+    /// <summary>
+    /// Ends a row of the scan. False when the table already needs more padding than the page may get: the empty cells
+    /// only grow from row to row, so it is written as blocks, and the scan stops here. Ending a row costs as many
+    /// steps as the row is wide, which is never more than its cells and empty cells: stopping at the budget keeps
+    /// the scan linear (a cell with a big colspan and rowspan above many rows made it quadratic).
+    /// </summary>
+    private bool EndScanRow(ref TableScan scan)
     {
         int width = UncoverRow(scan.Column);
         if (width > scan.Columns) scan.Columns = width;
@@ -398,5 +409,13 @@ internal ref partial struct MarkdownConverter
 
         scan.Rows++;
         scan.RowOpen = false;
+        return PaddingCost(in scan) <= _padBudget;
+    }
+
+    /// <summary>The chars the empty cells of the table and its delimiter row add to the Markdown.</summary>
+    private static long PaddingCost(in TableScan scan)
+    {
+        long empty = (long)scan.Rows * scan.Columns - scan.Cells;
+        return empty * 3 + scan.Columns * 12L;
     }
 }
