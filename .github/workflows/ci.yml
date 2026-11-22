@@ -27,7 +27,8 @@ jobs:
             10.0.x
             11.0.x
 
-      # The test project targets net9.0, net10.0 and net11.0: every build of the library is tested.
+      # The test project targets net9.0, net10.0 and net11.0: every build of the library is tested, one framework
+      # after another (TestTfmsInParallel in the project).
       # Every test is listed; a test that runs longer than 5 minutes is stopped and named in the log.
       - name: Test
         run: >-
