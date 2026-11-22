@@ -26,6 +26,12 @@ internal ref struct SanitizerWriter
     private Frame[] _frames;
     private int _frameCount;
     private int _openTables;    // written <table> elements that are open: the parts of a table are kept only in one
+    private int[] _openByKey;   // per HtmlTag, the written elements that are open and not ended early
+
+    // How many open elements EndImplied looks through for the one to end. The parser nests at most 512 deep;
+    // the bound keeps markup nested deeper than that, or open elements that are not nested (thousands of
+    // unclosed <font>), from making the pass quadratic.
+    private const int MaxImpliedScan = 1024;
 
     private struct Frame
     {
@@ -43,6 +49,8 @@ internal ref struct SanitizerWriter
         _policy = policy;
         _buf = ArrayPool<char>.Shared.Rent(Math.Clamp(capacity, 256, 1 << 20));
         _frames = ArrayPool<Frame>.Shared.Rent(32);
+        _openByKey = ArrayPool<int>.Shared.Rent(ParsingCore.TagNames.Length);
+        Array.Clear(_openByKey);
     }
 
     public readonly int Length => _len;
@@ -53,8 +61,10 @@ internal ref struct SanitizerWriter
     {
         ArrayPool<char>.Shared.Return(_buf);
         ArrayPool<Frame>.Shared.Return(_frames);
+        ArrayPool<int>.Shared.Return(_openByKey);
         _buf = [];
         _frames = [];
+        _openByKey = [];
     }
 
     /// <summary>The whole document.</summary>
@@ -156,14 +166,25 @@ internal ref struct SanitizerWriter
     /// </summary>
     private void EndImplied(int key, int baseFrames)
     {
-        ParsingCore.ImpliedEnds(key, out var pTargets, out var pStops, out var targets, out var stops);
-        if (pTargets != null) EndImplied(pTargets, pStops!, baseFrames);
-        if (targets != null) EndImplied(targets, stops!, baseFrames);
+        ParsingCore.ImpliedEnds(key, out var pTargets, out var pStops, out var targets, out var stops, out var pKeys, out var keys);
+        if (pTargets != null && AnyOpen(pKeys!)) EndImplied(pTargets, pStops!, baseFrames);
+        if (targets != null && AnyOpen(keys!)) EndImplied(targets, stops!, baseFrames);
+    }
+
+    /// <summary>Whether an element of one of these tags is open: mostly none is, and the stack is not looked through.</summary>
+    private readonly bool AnyOpen(int[] keys)
+    {
+        foreach (int k in keys)
+        {
+            if (_openByKey[k] > 0) return true;
+        }
+        return false;
     }
 
     private void EndImplied(bool[] targets, bool[] stops, int baseFrames)
     {
-        for (int j = _frameCount - 1; j >= baseFrames; j--)
+        int last = Math.Max(baseFrames, _frameCount - MaxImpliedScan);
+        for (int j = _frameCount - 1; j >= last; j--)
         {
             ref var frame = ref _frames[j];
             if (frame.Closed || frame.Key < 0) continue;
@@ -174,6 +195,7 @@ internal ref struct SanitizerWriter
                     ref var inner = ref _frames[k];
                     if (inner.Closed) continue;
                     inner.Closed = true;
+                    if (inner.Key >= 0) _openByKey[inner.Key]--;
                     if (inner.Key == (int)HtmlTag.Table) _openTables--;
                     Append("</");
                     Append(inner.Name);
@@ -195,6 +217,7 @@ internal ref struct SanitizerWriter
             _frames = bigger;
         }
         _frames[_frameCount++] = new Frame { End = end, InnerEnd = innerEnd, Name = name, Key = key };
+        if (key >= 0) _openByKey[key]++;
     }
 
     private int Close(int pos)
@@ -203,6 +226,7 @@ internal ref struct SanitizerWriter
         Text(pos, frame.InnerEnd + 1);
         if (!frame.Closed)
         {
+            if (frame.Key >= 0) _openByKey[frame.Key]--;
             if (frame.Key == (int)HtmlTag.Table) _openTables--;
             Append("</");
             Append(frame.Name);

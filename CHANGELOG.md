@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.8.1 (2026-11-22)
+
+### Fixed
+
+- `Sanitize()` took quadratic time on deeply nested markup: before each block it looked through all the open elements
+  for a `<p>` to end (6 s for 100,000 nested `<div>`, 1 MB; 101 s for 4 MB). It now looks only when such an element is
+  open, and at most 1024 elements deep: 8 ms and 26 ms.
+- `Article()` read the text of every nested heading, byline and small block of the page (12 s for 400,000 nested
+  `<div>`); it reads only those with at most 4 KB of markup. `IsProbablyReadable()` stops after reading four times
+  the page.
+- `ReadableArticle.Image` was "…/image/jpeg" on pages with `og:image:type` after `og:image`: the meta property
+  `og:image` was found at the start of `og:image:type`. A property name must now end where the pattern ends.
+- `ReadableArticle.Image` is only an http or https address (or a relative one on a page without a URL), never a
+  `javascript:` or `data:` one from the page's metadata.
+
 ## 1.8.0 (2026-11-22)
 
 ### Added

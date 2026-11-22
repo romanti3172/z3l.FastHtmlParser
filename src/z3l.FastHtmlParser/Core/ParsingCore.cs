@@ -758,20 +758,24 @@ internal static class ParsingCore
     /// an &lt;li&gt; the &lt;li&gt; before it, ...): the targets and the elements that stop the search for them.
     /// One or two rules; null when the tag ends nothing.
     /// </summary>
-    internal static void ImpliedEnds(int key, out bool[]? pTargets, out bool[]? pStops, out bool[]? targets, out bool[]? stops)
+    internal static void ImpliedEnds(int key, out bool[]? pTargets, out bool[]? pStops, out bool[]? targets, out bool[]? stops,
+        out int[]? pTargetKeys, out int[]? targetKeys)
     {
         pTargets = pStops = targets = stops = null;
+        pTargetKeys = targetKeys = null;
         if (key < 0) return;
 
         if (ClosesP[key])
         {
             pTargets = PRule.Targets;
             pStops = PRule.Stops;
+            pTargetKeys = PRule.TargetKeys;
         }
         if (ImpliedEndRules[key] is { } rule)
         {
             targets = rule.Targets;
             stops = rule.Stops;
+            targetKeys = rule.TargetKeys;
         }
     }
 
