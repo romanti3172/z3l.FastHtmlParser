@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The package that is found by "readability" and "article extraction". The extractor is a part of z3l.FastHtmlParser
+    (it reads the tags as the parser recorded them); this assembly has one class that calls it, and the package depends
+    on z3l.FastHtmlParser of the same version.
+    Keep it to that class: the packages are used together, and a second type or an extension method here
+    could get the name of one in the parser.
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net9.0;net10.0;net11.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>z3l.FastHtmlParser.Readability</AssemblyName>
+    <!-- The class is in the namespace of the parser: one "using" for both packages, and its full name is the package name. -->
+    <RootNamespace>z3l.FastHtmlParser</RootNamespace>
+
+    <!-- Turns on the trimming / Native AOT analyzers; no effect on the produced code. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- NuGet package. The version is in ..\Directory.Build.props: one for all the packages of this folder. -->
+  <PropertyGroup>
+    <PackageId>z3l.FastHtmlParser.Readability</PackageId>
+    <Title>Fast Readability: article extraction</Title>
+    <Authors>z3l</Authors>
+    <Copyright>Copyright © 2026 z3l</Copyright>
+    <Description>Fast main-content extraction for .NET 9/10/11 by the method of Mozilla Readability (the reader view of Firefox), built on z3l.FastHtmlParser: the article of a page without menus, sidebars, comments, ads and footers, as clean HTML, Markdown or text, with its title, author, date, excerpt, site name and image (JSON-LD, Open Graph, Twitter, Dublin Core). The content is sanitized. Checked against the 130 test pages of Mozilla Readability.</Description>
+    <PackageTags>readability;article-extraction;article-extractor;content-extraction;main-content;boilerplate-removal;reader-mode;reader-view;html;metadata;open-graph;json-ld;markdown;llm;rag;scraping;web-scraping;crawler;fast;dotnet;csharp;net9;net10;net11;aot;fasthtmlparser;smartreader-alternative</PackageTags>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageProjectUrl>https://fasthtmlparser.com/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/romanti3172/z3l.FastHtmlParser</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>https://github.com/romanti3172/z3l.FastHtmlParser/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+
+    <!--
+      A new package: with no release to compare with, "dotnet pack" checks only the package itself. After the first
+      release add PackageValidationBaselineVersion with the version just released, as the other packages have.
+    -->
+    <EnablePackageValidation>true</EnablePackageValidation>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' or '$(TF_BUILD)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE.md" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- In the package this is the dependency on z3l.FastHtmlParser, not lower than this version. -->
+  <ItemGroup>
+    <ProjectReference Include="..\z3l.FastHtmlParser\z3l.FastHtmlParser.csproj" />
+  </ItemGroup>
+
+</Project>

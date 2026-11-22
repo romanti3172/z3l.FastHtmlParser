@@ -753,9 +753,31 @@ internal static class ParsingCore
         return rules;
     }
 
+    /// <summary>
+    /// The tags that the start of a <paramref name="key"/> tag ends, by the HTML rules (a block ends a &lt;p&gt;,
+    /// an &lt;li&gt; the &lt;li&gt; before it, ...): the targets and the elements that stop the search for them.
+    /// One or two rules; null when the tag ends nothing.
+    /// </summary>
+    internal static void ImpliedEnds(int key, out bool[]? pTargets, out bool[]? pStops, out bool[]? targets, out bool[]? stops)
+    {
+        pTargets = pStops = targets = stops = null;
+        if (key < 0) return;
+
+        if (ClosesP[key])
+        {
+            pTargets = PRule.Targets;
+            pStops = PRule.Stops;
+        }
+        if (ImpliedEndRules[key] is { } rule)
+        {
+            targets = rule.Targets;
+            stops = rule.Stops;
+        }
+    }
+
     // HTML5 void elements (incl. obsolete ones the parsing rules also treat as void) and declarations
     // (the scan ends every "!..." / "?..." tag by its first char anyway, in XML too).
-    private static readonly bool[] VoidTags = BuildVoidTags();
+    internal static readonly bool[] VoidTags = BuildVoidTags();
 
     private static bool[] BuildVoidTags()
     {

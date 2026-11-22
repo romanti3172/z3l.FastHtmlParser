@@ -21,6 +21,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\z3l.FastHtmlParser\z3l.FastHtmlParser.csproj" />
     <ProjectReference Include="..\..\src\z3l.FastHtmlParser.HtmlToMarkdown\z3l.FastHtmlParser.HtmlToMarkdown.csproj" />
+    <ProjectReference Include="..\..\src\z3l.FastHtmlParser.HtmlSanitizer\z3l.FastHtmlParser.HtmlSanitizer.csproj" />
+    <ProjectReference Include="..\..\src\z3l.FastHtmlParser.Readability\z3l.FastHtmlParser.Readability.csproj" />
   </ItemGroup>
 
   <ItemGroup>

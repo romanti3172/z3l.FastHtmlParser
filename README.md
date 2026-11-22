@@ -16,6 +16,10 @@ Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 
   line structure (`<br>`, `<p>`, `<li>`, `<div>`...).
 - **HTML to Markdown.** `Markdown()` gives a page or any tag as Markdown: headings, lists, links, tables,
   code blocks. 10–20x faster than ReverseMarkdown and Html2Markdown on typical pages, with 37–62x less memory.
+- **Article extraction.** `Article()` finds the main content of a page by the method of Mozilla's Readability:
+  title, author, date, image and the article without menus, sidebars and comments, as clean HTML, Markdown or text.
+- **HTML sanitizer.** `Sanitize()` keeps only the allowed tags, attributes, URL schemes and CSS of untrusted HTML,
+  written anew so that a browser reads it as written: no scripts, event handlers or `javascript:` links.
 - **XPath 1.0.** `doc.XPath("//div[@class='card']/a")`, `doc.XPathValues("//a/@href")`, compiled and cached.
 - **CSS selectors.** `doc.Css("div.card > a[href^='/item']")`, `:nth-child()`, `:not()`, `:has()`, compiled and cached.
 - **Forms.** `form.Fields()` gives the fields a browser would send (hidden `__VIEWSTATE`, checked boxes, selected options),
@@ -268,6 +272,83 @@ is for those who look for an HTML to Markdown converter: this library with one m
 With z3l.FastHtmlParser installed you do not need it; the two can be installed together.
 Try the converter on any page: https://htmltomarkdown.fasthtmlparser.com
 
+## Article extraction
+
+`Article()` finds the main content of a page, by the method of Mozilla's Readability (the reader view of Firefox):
+the article without the menus, sidebars, comments, ads and footers around it.
+
+```csharp
+var doc = new HtmlParser(html, "https://example.com/news/2026/11/foxes");
+
+if (doc.IsProbablyReadable() && doc.Article() is { } article)    // the quick test passes over lists and search pages
+{
+    Console.WriteLine($"{article.Title} by {article.Byline}, {article.PublishedTime}");
+    string markdown = article.Markdown;      // for a language model
+    string clean = article.Content;          // clean HTML, safe to show
+}
+```
+
+- `Title`, `Byline`, `Excerpt`, `SiteName`, `PublishedTime`, `Image` from JSON-LD, Open Graph, Twitter and Dublin
+  Core metadata, or from the page itself (`<title>` without the site name, a byline, the first paragraph);
+  `Language` from `<html lang>`.
+- `Content` is the article as clean HTML, written by `Sanitize()`: paragraphs, headings, lists, tables of data,
+  links, images (lazy ones from `data-src`) and code, absolute with the page URL; `Markdown` and `TextContent` are
+  made from it.
+- The page is not changed: what Readability removes is marked in the tag list and the text is counted in one pass.
+  On the 130 test pages of Mozilla Readability the text of the article matches the expected one at 0.99
+  (mean F1 by words), and 498 of 502 metadata fields are the same (`ArticleTests`).
+
+| Article of a page: HTML → title, metadata, text | z3l.FastHtmlParser | SmartReader (Readability on AngleSharp) |
+|---|---:|---:|
+| Ars Technica, 56 KB | **255 μs**, 152 KB | 3,454 μs (14x), 2,439 KB (16x) |
+| Medium, 120 KB | **628 μs**, 293 KB | 7,005 μs (11x), 7,941 KB (27x) |
+| Wikipedia, 244 KB | **2,508 μs**, 1,396 KB | 48,513 μs (19x), 19,932 KB (14x) |
+| New York Times, 309 KB | **935 μs**, 623 KB | 15,569 μs (17x), 8,900 KB (14x) |
+| The Guardian, 1.1 MB | **824 μs**, 430 KB | 18,705 μs (23x), 17,081 KB (40x) |
+
+Pages from the test set of Mozilla Readability, .NET 10, Ryzen 7 3800X; `ArticleBenchmarks` in
+[benchmarks](https://github.com/romanti3172/z3l.FastHtmlParser/tree/main/benchmarks).
+
+The package [z3l.FastHtmlParser.Readability](https://www.nuget.org/packages/z3l.FastHtmlParser.Readability) is this
+library with one more class, `Readability.Parse(html, url)`, for those who look for Readability by name.
+
+## Sanitizing HTML
+
+`Sanitize()` makes untrusted HTML (comments, posts, e-mails, scraped pages) safe to put in a page.
+
+```csharp
+string safe = HtmlText.Sanitize("<p onclick=\"steal()\">Hi <script>alert(1)</script></p>");   // "<p>Hi </p>"
+
+var options = new SanitizeOptions { LinkRel = "nofollow noopener" };   // every link gets this rel
+options.AllowedAttributes.Remove("style");
+options.AllowedTags.Add("iframe");                                     // video embeds
+string comment = new HtmlParser(html, "https://example.com/post/1").Sanitize(options);   // relative links made absolute
+```
+
+- Only the allowed tags, attributes, URL schemes (`http`, `https`, `mailto`, `tel`, relative) and CSS properties
+  with plain values are kept; every set of `SanitizeOptions` can be changed. A tag that is not allowed is left out
+  and its text stays; `script`, `style`, form controls, frames and media go with their content.
+- Never kept, whatever the options say: event handlers, `srcdoc`, `script`, `style`, `template`, `noscript`, `svg`,
+  `math` and the other tags whose content a browser does not read as HTML. Hidden schemes (`JaVaScRiPt:`,
+  `jav&#x09;ascript:`, entities, control chars) are found; CSS with `url(`, `expression` or escapes is dropped.
+- The result is written anew: lower-case tags, attributes in double quotes, every text and value escaped, every
+  element closed and the end tags a browser would imply written where it would imply them. On random broken markup
+  AngleSharp (a parser that follows the HTML standard, as browsers do) finds only allowed elements and attributes
+  in the result, and sanitizing it again changes nothing (`SanitizerTests`).
+
+| Sanitize with the default options | z3l.FastHtmlParser | HtmlSanitizer (Ganss.Xss, on AngleSharp) |
+|---|---:|---:|
+| A comment, 1 KB | **7.6 μs**, 3 KB | 135 μs (18x), 115 KB (37x) |
+| quotes.toscrape.com, 11 KB | **67 μs**, 32 KB | 793 μs (12x), 698 KB (22x) |
+| webscraper.io laptops, 38 KB | **160 μs**, 76 KB | 1,623 μs (10x), 1,055 KB (14x) |
+| books.toscrape.com, 51 KB | **276 μs**, 142 KB | 2,263 μs (8x), 1,573 KB (11x) |
+
+.NET 10, Ryzen 7 3800X; `SanitizeBenchmarks` in
+[benchmarks](https://github.com/romanti3172/z3l.FastHtmlParser/tree/main/benchmarks).
+
+The package [z3l.FastHtmlParser.HtmlSanitizer](https://www.nuget.org/packages/z3l.FastHtmlParser.HtmlSanitizer) is
+this library with one more class, `HtmlSanitizer.Sanitize(html, url, options)`.
+
 ## Parsing from a buffer
 
 Text that is already in a `char[]` or a pooled buffer can be parsed in place, without copying it into a string.
@@ -290,6 +371,7 @@ HtmlText.Decode("Q&amp;A &copy; 2026");            // "Q&A © 2026"
 HtmlText.ToText("<b>Hello</b>   world");           // "Hello world"
 HtmlText.ToTextWithLineBreaks("<p>One</p><p>Two</p>");
 HtmlText.ToMarkdown("<p>One <a href=\"/two\">two</a></p>");   // "One [two](/two)"
+HtmlText.Sanitize("<b onclick=\"x()\">bold</b>");                // "<b>bold</b>"
 ```
 
 ## Parsing rules
