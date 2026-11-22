@@ -3,7 +3,9 @@
     <Project Path="benchmarks/z3l.FastHtmlParser.Benchmarks/z3l.FastHtmlParser.Benchmarks.csproj" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/z3l.FastHtmlParser.HtmlSanitizer/z3l.FastHtmlParser.HtmlSanitizer.csproj" />
     <Project Path="src/z3l.FastHtmlParser.HtmlToMarkdown/z3l.FastHtmlParser.HtmlToMarkdown.csproj" />
+    <Project Path="src/z3l.FastHtmlParser.Readability/z3l.FastHtmlParser.Readability.csproj" />
     <Project Path="src/z3l.FastHtmlParser/z3l.FastHtmlParser.csproj" />
   </Folder>
   <Folder Name="/tests/">

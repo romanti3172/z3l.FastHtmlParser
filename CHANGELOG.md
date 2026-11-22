@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.8.0 (2026-11-22)
+
+### Added
+
+- `Article()`: the main content of a page by the method of Mozilla's Readability (the reader view of Firefox), as
+  `ReadableArticle`: the article without menus, sidebars, comments, ads and footers as clean HTML (`Content`),
+  `Markdown` and `TextContent`, with `Title`, `Byline`, `Excerpt`, `SiteName`, `PublishedTime`, `Image` and
+  `Language` from JSON-LD, Open Graph, Twitter and Dublin Core metadata or from the page. The page is not changed:
+  what Readability removes is marked in the tag list, the text is counted in one pass. On the 130 test pages of
+  Mozilla Readability the text of the article matches the expected one at 0.99 (mean F1 by words) and 498 of 502
+  metadata fields are the same. `IsProbablyReadable()` is Readability's quick test for pages with an article.
+- `Sanitize()` and `HtmlText.Sanitize()`: untrusted HTML made safe to put in a page, with `SanitizeOptions` (allowed
+  tags, attributes, URL schemes, CSS properties, tags removed with their content, `data-*` attributes, inlined images,
+  absolute URLs, `rel` of links). The result is written anew: kept tags by their lower-case names with their kept
+  attributes in double quotes, every text and value escaped, every element closed, and the end tags a browser would
+  imply written where it would imply them. Event handlers, `javascript:` and other schemes that are not allowed,
+  CSS with `url()` or `expression()`, `svg`, `math`, `style`, `template` and the other tags whose content a browser
+  does not read as HTML are never written. Checked against AngleSharp on random broken markup: a browser sees only
+  allowed elements and attributes, and sanitizing the result again changes nothing.
+- Two new packages, each one class over the parser, for those who look for these by name:
+  `z3l.FastHtmlParser.Readability` (`Readability.Parse(html, url)`, `Readability.IsProbablyReadable(html)`) and
+  `z3l.FastHtmlParser.HtmlSanitizer` (`HtmlSanitizer.Sanitize(html, url, options)`).
+
 ## 1.7.0 (2026-11-22)
 
 ### Added

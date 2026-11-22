@@ -1,12 +1,12 @@
 <Project>
 
   <!--
-    One version for the packages built from this folder: z3l.FastHtmlParser and z3l.FastHtmlParser.HtmlToMarkdown
-    are released together, and the second depends on the first of the same version.
+    One version for the packages built from this folder: z3l.FastHtmlParser and its HtmlToMarkdown, HtmlSanitizer and
+    Readability packages are released together, and these three depend on z3l.FastHtmlParser of the same version.
     CI takes the version from the tag (-p:Version=...), this one is for untagged builds.
   -->
   <PropertyGroup>
-    <Version>1.7.0</Version>
+    <Version>1.8.0</Version>
   </PropertyGroup>
 
 </Project>

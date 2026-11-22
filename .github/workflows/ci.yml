@@ -37,7 +37,7 @@ jobs:
           --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type none
 
       # Version comes from the tag: v0.1.0 -> 0.1.0. Untagged builds keep the version of src/Directory.Build.props.
-      # Both packages get the same version; z3l.FastHtmlParser.HtmlToMarkdown depends on z3l.FastHtmlParser of it.
+      # All packages get the same version; HtmlToMarkdown, HtmlSanitizer and Readability depend on z3l.FastHtmlParser of it.
       # Packing also compares the public API with the last release (package validation in the csproj):
       # a breaking change fails the build.
       - name: Pack
@@ -49,13 +49,16 @@ jobs:
           fi
           dotnet pack src/z3l.FastHtmlParser -c Release -o artifacts $VERSION_ARG
           dotnet pack src/z3l.FastHtmlParser.HtmlToMarkdown -c Release -o artifacts $VERSION_ARG
+          dotnet pack src/z3l.FastHtmlParser.HtmlSanitizer -c Release -o artifacts $VERSION_ARG
+          dotnet pack src/z3l.FastHtmlParser.Readability -c Release -o artifacts $VERSION_ARG
 
       - uses: actions/upload-artifact@v7
         with:
           name: nupkg
           path: artifacts/*
 
-  # Publishes the packages built and tested above: z3l.FastHtmlParser and z3l.FastHtmlParser.HtmlToMarkdown.
+  # Publishes the packages built and tested above: z3l.FastHtmlParser and its HtmlToMarkdown, HtmlSanitizer and
+  # Readability packages.
   # A separate job, so that pull requests and branch builds never run with the permission to get a nuget.org key.
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -111,7 +114,7 @@ jobs:
           fi
           echo "" >> notes.md
           echo "NuGet: https://www.nuget.org/packages/z3l.FastHtmlParser/$VERSION ·" \
-            "https://www.nuget.org/packages/z3l.FastHtmlParser.HtmlToMarkdown/$VERSION" >> notes.md
+            "https://www.nuget.org/packages/z3l.FastHtmlParser.HtmlToMarkdown/$VERSION ·"             "https://www.nuget.org/packages/z3l.FastHtmlParser.HtmlSanitizer/$VERSION ·"             "https://www.nuget.org/packages/z3l.FastHtmlParser.Readability/$VERSION" >> notes.md
           PRERELEASE=""
           if [[ "$VERSION" == *-* ]]; then PRERELEASE="--prerelease"; fi
           gh release create "$GITHUB_REF_NAME" artifacts/*.nupkg --verify-tag --title "$GITHUB_REF_NAME" \
