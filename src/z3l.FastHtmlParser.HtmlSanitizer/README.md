@@ -3,7 +3,7 @@
 Fast HTML sanitizer for .NET 9, .NET 10 and .NET 11 against XSS: keeps only the allowed tags, attributes, URL schemes
 and CSS properties of untrusted HTML (comments, posts, e-mails, scraped pages). No AngleSharp dependency.
 
-**Website:** https://fasthtmlparser.com · **Source:** https://github.com/romanti3172/z3l.FastHtmlParser
+**Website:** https://htmlsanitizer.fasthtmlparser.com (try it on any page) · **Source:** https://github.com/romanti3172/z3l.FastHtmlParser
 
 8–18x faster than HtmlSanitizer (Ganss.Xss), with 11–37x less memory.
 

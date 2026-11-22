@@ -105,6 +105,60 @@ memory, which the Allocated column does not show: its numbers there are what its
 Whether the Markdown is right is not measured here but tested: `MarkdownCrossCheckTests` renders the Markdown of every
 test page back to HTML with Markdig and compares it with the page (text, links, images, headings, list items).
 
+## Extract the article of a page
+
+From the HTML string to the article with its metadata and text: `new HtmlParser(html, url).Article()` against
+[SmartReader](https://www.nuget.org/packages/SmartReader) 0.11.1, the .NET port of Mozilla Readability on AngleSharp
+(`new Reader(url, html).GetArticle()`). The pages are test pages of Mozilla Readability
+(`test/test-pages/*/source.html`), saved in `benchmarks/local` as `article-*.html`: third-party content, not in the
+repository. The setup checks that both find an article of about the same length.
+
+```
+dotnet run -c Release --project benchmarks/z3l.FastHtmlParser.Benchmarks -- --filter '*ArticleBenchmarks*'
+```
+
+BenchmarkDotNet 0.15.8, .NET 10.0.12, AMD Ryzen 7 3800X 3.90 GHz, Windows 10.
+
+| Page | Library | Mean | Ratio | Allocated | Alloc Ratio |
+|---|---|---:|---:|---:|---:|
+| Ars Technica, 56 KB | **z3l.FastHtmlParser** | **254.9 μs** | **1.00** | **151.7 KB** | **1.00** |
+| | SmartReader | 3,454.2 μs | 13.6x | 2,438.6 KB | 16.1x |
+| Medium, 120 KB | **z3l.FastHtmlParser** | **628.1 μs** | **1.00** | **292.5 KB** | **1.00** |
+| | SmartReader | 7,004.6 μs | 11.2x | 7,941.2 KB | 27.1x |
+| Wikipedia, 244 KB | **z3l.FastHtmlParser** | **2,508.2 μs** | **1.00** | **1,396.4 KB** | **1.00** |
+| | SmartReader | 48,513.3 μs | 19.3x | 19,931.7 KB | 14.3x |
+| New York Times, 309 KB | **z3l.FastHtmlParser** | **935.1 μs** | **1.00** | **622.8 KB** | **1.00** |
+| | SmartReader | 15,569.4 μs | 16.6x | 8,899.8 KB | 14.3x |
+| The Guardian, 1.1 MB | **z3l.FastHtmlParser** | **824.0 μs** | **1.00** | **430.3 KB** | **1.00** |
+| | SmartReader | 18,705.1 μs | 22.7x | 17,081.4 KB | 39.7x |
+
+The time of z3l.FastHtmlParser grows with the markup, that of SmartReader with the DOM it builds and changes: The
+Guardian is 1.1 MB, but mostly scripts and styles, which the parser passes over as text.
+
+## Sanitize HTML
+
+From the HTML string to the safe HTML string, with the default options of both: `new HtmlParser(html).Sanitize()`
+against [HtmlSanitizer](https://www.nuget.org/packages/HtmlSanitizer) 11.0.26 (Ganss.Xss), which parses with AngleSharp
+and writes the DOM back. "a comment" is 1 KB of a user comment with the usual tricks in it (event handlers,
+`javascript:` links, a script, an `svg`, an `iframe`); the other pages are whole pages.
+
+```
+dotnet run -c Release --project benchmarks/z3l.FastHtmlParser.Benchmarks -- --filter '*SanitizeBenchmarks*'
+```
+
+BenchmarkDotNet 0.15.8, .NET 10.0.12, AMD Ryzen 7 3800X 3.90 GHz, Windows 10.
+
+| Page | Library | Mean | Ratio | Allocated | Alloc Ratio |
+|---|---|---:|---:|---:|---:|
+| a comment, 1 KB | **z3l.FastHtmlParser** | **7.6 μs** | **1.00** | **3.1 KB** | **1.00** |
+| | HtmlSanitizer (Ganss.Xss) | 135.2 μs | 17.8x | 114.7 KB | 37.0x |
+| quotes, 11 KB | **z3l.FastHtmlParser** | **67.4 μs** | **1.00** | **31.9 KB** | **1.00** |
+| | HtmlSanitizer (Ganss.Xss) | 793.0 μs | 11.8x | 697.9 KB | 21.9x |
+| laptops, 38 KB | **z3l.FastHtmlParser** | **159.9 μs** | **1.00** | **75.6 KB** | **1.00** |
+| | HtmlSanitizer (Ganss.Xss) | 1,623.1 μs | 10.2x | 1,054.9 KB | 14.0x |
+| books, 51 KB | **z3l.FastHtmlParser** | **275.8 μs** | **1.00** | **142.3 KB** | **1.00** |
+| | HtmlSanitizer (Ganss.Xss) | 2,262.8 μs | 8.2x | 1,573.2 KB | 11.1x |
+
 ## What is compared
 
 The books page without end tags is the books page with all 75 `</li>` and 60 `</p>` left out, as on sloppy sites:

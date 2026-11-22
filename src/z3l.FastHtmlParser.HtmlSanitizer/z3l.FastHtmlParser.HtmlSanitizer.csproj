@@ -33,7 +33,7 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageProjectUrl>https://fasthtmlparser.com/</PackageProjectUrl>
+    <PackageProjectUrl>https://htmlsanitizer.fasthtmlparser.com/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/romanti3172/z3l.FastHtmlParser</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReleaseNotes>https://github.com/romanti3172/z3l.FastHtmlParser/blob/main/CHANGELOG.md</PackageReleaseNotes>
