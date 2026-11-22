@@ -311,6 +311,7 @@ Pages from the test set of Mozilla Readability, .NET 10, Ryzen 7 3800X; `Article
 
 The package [z3l.FastHtmlParser.Readability](https://www.nuget.org/packages/z3l.FastHtmlParser.Readability) is this
 library with one more class, `Readability.Parse(html, url)`, for those who look for Readability by name.
+Try it on any page: https://readability.fasthtmlparser.com
 
 ## Sanitizing HTML
 
@@ -348,6 +349,7 @@ string comment = new HtmlParser(html, "https://example.com/post/1").Sanitize(opt
 
 The package [z3l.FastHtmlParser.HtmlSanitizer](https://www.nuget.org/packages/z3l.FastHtmlParser.HtmlSanitizer) is
 this library with one more class, `HtmlSanitizer.Sanitize(html, url, options)`.
+Try it on your HTML: https://htmlsanitizer.fasthtmlparser.com
 
 ## Parsing from a buffer
 

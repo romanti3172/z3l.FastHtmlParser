@@ -4,7 +4,7 @@ Fast article extraction for .NET 9, .NET 10 and .NET 11, by the method of Mozill
 of Firefox): the article of a page without the menus, sidebars, comments, ads and footers around it, as clean HTML,
 Markdown or text, with its title, author, date, excerpt, site name and image.
 
-**Website:** https://fasthtmlparser.com · **Source:** https://github.com/romanti3172/z3l.FastHtmlParser
+**Website:** https://readability.fasthtmlparser.com (try it on any page) · **Source:** https://github.com/romanti3172/z3l.FastHtmlParser
 
 11–23x faster than SmartReader, with 14–40x less memory.
 
