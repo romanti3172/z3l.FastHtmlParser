@@ -8,7 +8,7 @@
     could get the name of one in the parser.
   -->
   <PropertyGroup>
-    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>net9.0;net10.0;net11.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>z3l.FastHtmlParser.HtmlToMarkdown</AssemblyName>
@@ -27,8 +27,8 @@
     <Title>Fast HTML to Markdown</Title>
     <Authors>z3l</Authors>
     <Copyright>Copyright © 2026 z3l</Copyright>
-    <Description>Fast HTML to Markdown converter for .NET 9/10, built on z3l.FastHtmlParser: 10–20x faster than ReverseMarkdown and Html2Markdown on typical pages, with 37–62x less memory. Headings, nested lists, links and images (absolute with a page URL), GitHub tables with colspan and rowspan, code blocks with their language, task lists, quotes. Text is escaped only where Markdown needs it; linear time on any markup.</Description>
-    <PackageTags>markdown;html-to-markdown;htmltomarkdown;html2markdown;html-to-md;html2md;html;converter;markdown-converter;commonmark;gfm;llm;rag;scraping;web-scraping;fast;low-allocation;performance;dotnet;csharp;net9;net10;aot;fasthtmlparser;reversemarkdown-alternative;html2markdown-alternative</PackageTags>
+    <Description>Fast HTML to Markdown converter for .NET 9/10/11, built on z3l.FastHtmlParser: 10–20x faster than ReverseMarkdown and Html2Markdown on typical pages, with 37–62x less memory. Headings, nested lists, links and images (absolute with a page URL), GitHub tables with colspan and rowspan, code blocks with their language, task lists, quotes. Text is escaped only where Markdown needs it; linear time on any markup.</Description>
+    <PackageTags>markdown;html-to-markdown;htmltomarkdown;html2markdown;html-to-md;html2md;html;converter;markdown-converter;commonmark;gfm;llm;rag;scraping;web-scraping;fast;low-allocation;performance;dotnet;csharp;net9;net10;net11;aot;fasthtmlparser;reversemarkdown-alternative;html2markdown-alternative</PackageTags>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>

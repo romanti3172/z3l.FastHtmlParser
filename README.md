@@ -1,6 +1,6 @@
 # z3l.FastHtmlParser
 
-Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 9 and .NET 10.
+Fast, low-allocation HTML / XML parser for scraping and data extraction on .NET 9, .NET 10 and .NET 11.
 
 **Website:** https://fasthtmlparser.com (try it on any page) · **NuGet:** https://www.nuget.org/packages/z3l.FastHtmlParser
 
@@ -356,7 +356,7 @@ The same parser is available for:
 
 | Language | Package | Source |
 |---|---|---|
-| C# (.NET 9 and 10) | [z3l.FastHtmlParser](https://www.nuget.org/packages/z3l.FastHtmlParser) on NuGet | [romanti3172/z3l.FastHtmlParser](https://github.com/romanti3172/z3l.FastHtmlParser) |
+| C# (.NET 9, 10 and 11) | [z3l.FastHtmlParser](https://www.nuget.org/packages/z3l.FastHtmlParser) on NuGet | [romanti3172/z3l.FastHtmlParser](https://github.com/romanti3172/z3l.FastHtmlParser) |
 | Go | `github.com/romanti3172/fasthtmlparser` | [romanti3172/fasthtmlparser](https://github.com/romanti3172/fasthtmlparser) |
 | Rust | [fasthtmlparser](https://crates.io/crates/fasthtmlparser) on crates.io | [romanti3172/fasthtmlparser-rs](https://github.com/romanti3172/fasthtmlparser-rs) |
 | JavaScript / TypeScript | [z3l-fasthtmlparser](https://www.npmjs.com/package/z3l-fasthtmlparser) on npm | [romanti3172/fasthtmlparser-js](https://github.com/romanti3172/fasthtmlparser-js) |

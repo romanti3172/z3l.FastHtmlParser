@@ -1,6 +1,6 @@
 # z3l.FastHtmlParser.HtmlToMarkdown
 
-Fast HTML to Markdown for .NET 9 and .NET 10: for a language model, a search index, a note to keep.
+Fast HTML to Markdown for .NET 9, .NET 10 and .NET 11: for a language model, a search index, a note to keep.
 
 **Website:** https://htmltomarkdown.fasthtmlparser.com (try it on any page) · **Source:** https://github.com/romanti3172/z3l.FastHtmlParser
 

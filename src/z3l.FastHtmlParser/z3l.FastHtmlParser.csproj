@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- .NET 9+: FrozenDictionary/Dictionary AlternateLookup<ReadOnlySpan<char>> -->
-    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>net9.0;net10.0;net11.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>z3l.FastHtmlParser</AssemblyName>
@@ -20,8 +20,8 @@
     <Title>Fast HTML Parser</Title>
     <Authors>z3l</Authors>
     <Copyright>Copyright © 2026 z3l</Copyright>
-    <Description>Fast, low-allocation HTML/XML parser for web scraping on .NET 9/10. About 10x (up to 30x) faster and 12–23x less memory than AngleSharp and HtmlAgilityPack in benchmarks. XPath 1.0 and CSS selectors, zero-allocation tag/attribute matching, HTML5 entities, clean HTML to text extraction, HTML to Markdown.</Description>
-    <PackageTags>html;parser;html-parser;htmlparser;fasthtmlparser;fast-html-parser;htmlscraper;html-scraper;xpath;html-xpath;xpath-query;css;css-selector;css-selectors;queryselector;queryselectorall;scraping;crawler;xml;rss;sitemap;html5;entities;span;performance;web;web-scraping;webscraping;scraper;text;html-to-text;htmltotext;text-extraction;markdown;html-to-markdown;htmltomarkdown;html2markdown;dom;fast;low-allocation;zero-allocation;dotnet;csharp;net9;net10;aot;htmlagilitypack-alternative;anglesharp-alternative</PackageTags>
+    <Description>Fast, low-allocation HTML/XML parser for web scraping on .NET 9/10/11. About 10x (up to 30x) faster and 12–23x less memory than AngleSharp and HtmlAgilityPack in benchmarks. XPath 1.0 and CSS selectors, zero-allocation tag/attribute matching, HTML5 entities, clean HTML to text extraction, HTML to Markdown.</Description>
+    <PackageTags>html;parser;html-parser;htmlparser;fasthtmlparser;fast-html-parser;htmlscraper;html-scraper;xpath;html-xpath;xpath-query;css;css-selector;css-selectors;queryselector;queryselectorall;scraping;crawler;xml;rss;sitemap;html5;entities;span;performance;web;web-scraping;webscraping;scraper;text;html-to-text;htmltotext;text-extraction;markdown;html-to-markdown;htmltomarkdown;html2markdown;dom;fast;low-allocation;zero-allocation;dotnet;csharp;net9;net10;net11;aot;htmlagilitypack-alternative;anglesharp-alternative</PackageTags>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
