@@ -43,10 +43,11 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
 
     <!--
-      A new package: with no release to compare with, "dotnet pack" checks only the package itself. After the first
-      release add PackageValidationBaselineVersion with the version just released, as the other packages have.
+      As in the parser: "dotnet pack" compares the public API with the last released package (downloaded from
+      nuget.org) and fails on a breaking change. After each release set the baseline to the version just released.
     -->
     <EnablePackageValidation>true</EnablePackageValidation>
+    <PackageValidationBaselineVersion>1.8.0</PackageValidationBaselineVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' or '$(TF_BUILD)' == 'true'">
