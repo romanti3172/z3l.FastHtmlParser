@@ -88,6 +88,31 @@ public sealed partial class ArticleTests
     }
 
     [TestMethod]
+    public void Image_IsTheImage_NotItsTypeOrSize()
+    {
+        // og:image:type came after og:image and took its place: "image/jpeg" as the address of the image
+        const string meta = "<meta property=\"og:image\" content=\"https://cdn.example.com/lead.webp\">"
+            + "<meta property=\"og:image:width\" content=\"1920\"><meta property=\"og:image:type\" content=\"image/jpeg\">"
+            + "<meta property=\"og:title:alt\" content=\"not the title\"><meta property=\"og:title\" content=\"The title\">";
+        var article = new HtmlParser(Page(meta, NewsBody), "https://news.example.com/x").Article();
+
+        Assert.AreEqual("https://cdn.example.com/lead.webp", article?.Image);
+        Assert.AreEqual("The title", article?.Title);
+    }
+
+    [TestMethod]
+    [DataRow("javascript:alert(1)")]
+    [DataRow("data:image/svg+xml,<svg onload=alert(1)>")]
+    [DataRow("vbscript:x")]
+    public void Image_IsAWebAddressOnly(string image)
+    {
+        var meta = $"<meta property=\"og:image\" content=\"{image}\">";
+        Assert.IsNull(new HtmlParser(Page(meta, NewsBody), "https://news.example.com/x").Article()?.Image);
+        Assert.IsNull(new HtmlParser(Page(meta, NewsBody)).Article()?.Image);
+        Assert.AreEqual("/img/a.png", new HtmlParser(Page("<meta property=\"og:image\" content=\"/img/a.png\">", NewsBody)).Article()?.Image);
+    }
+
+    [TestMethod]
     public void Metadata_FromMetaTags_WhenThereIsNoJsonLd()
     {
         const string meta =

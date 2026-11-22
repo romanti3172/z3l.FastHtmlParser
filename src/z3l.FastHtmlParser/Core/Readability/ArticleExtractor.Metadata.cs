@@ -85,7 +85,7 @@ internal sealed partial class ArticleExtractor
         metadata.Excerpt = Tidy(metadata.Excerpt);
         metadata.SiteName = Tidy(metadata.SiteName);
         metadata.PublishedTime = Tidy(metadata.PublishedTime);
-        metadata.Image = metadata.Image == null ? null : Resolve(metadata.Image.Trim());
+        metadata.Image = metadata.Image == null ? null : WebAddress(Resolve(metadata.Image.Trim()));
         return metadata;
 
         static string? Tidy(string? value)
@@ -98,6 +98,20 @@ internal sealed partial class ArticleExtractor
     }
 
     /// <summary>A URL from the metadata made absolute against the page, when the page has an address.</summary>
+    /// <summary>The address when it is an http or https one (made absolute, or relative on a page without an address); null otherwise.</summary>
+    private static string? WebAddress(string url)
+    {
+        if (url.Length == 0) return null;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.IsFile && !url.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+        {
+            // relative: it has no scheme of its own, unless a ':' comes before any '/', '?' or '#'
+            int colon = url.IndexOf(':');
+            int stop = url.IndexOfAny(['/', '?', '#']);
+            return colon >= 0 && (stop < 0 || colon < stop) ? null : url;
+        }
+        return uri.Scheme is "http" or "https" ? url : null;
+    }
+
     private string Resolve(string url)
     {
         if (_document.PageUri is not { } baseUri || Uri.TryCreate(url, UriKind.Absolute, out var absolute) && !absolute.IsFile)
@@ -366,7 +380,9 @@ internal sealed partial class ArticleExtractor
 
     private static int WordCount(string text) => Spaces().Split(text.Trim()).Count(w => w.Length > 0);
 
-    [GeneratedRegex(@"\s*(article|dc|dcterm|og|twitter)\s*:\s*(author|creator|description|published_time|title|site_name|image|image:src|image:url|image:secure_url)\s*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    // A name that ends there: "og:image" is not the start of "og:image:type" (whose "image/jpeg" took the place of
+    // the image's address). The start is free, as in Readability: "og:article:author" gives "article:author".
+    [GeneratedRegex(@"\s*(article|dc|dcterm|og|twitter)\s*:\s*(author|creator|description|published_time|title|site_name|image|image:src|image:url|image:secure_url)(?![\w:.-])\s*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex MetaProperty();
 
     [GeneratedRegex(@"^\s*(?:(dc|dcterm|og|twitter|parsely|weibo:(article|webpage))\s*[-\.:]\s*)?(author|creator|pub-date|description|title|site_name|date|image|image:src)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]

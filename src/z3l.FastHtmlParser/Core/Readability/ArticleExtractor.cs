@@ -30,6 +30,10 @@ internal sealed partial class ArticleExtractor
     private const int CharThreshold = 500;
     private const int TopCandidates = 5;
 
+    // A byline, a title heading, an ad label are short: an element with more markup than this is none of them, and its
+    // text is not read (on deeply nested markup reading it for every element would take quadratic time).
+    private const int ShortElementChars = 4096;
+
     private readonly HtmlParser _document;
     private readonly TagList _data;
     private readonly int _count;
@@ -84,6 +88,9 @@ internal sealed partial class ArticleExtractor
         }
 
         double score = 0;
+        // The text of each candidate is read from its own markup: paragraphs nested in each other would read the
+        // same text again and again. Past this many chars read the page counts as not readable.
+        long budget = 4L * document.Source.Length + 65536;
         for (int i = 0; i < count; i++)
         {
             ref readonly var node = ref data.Node(i);
@@ -107,6 +114,8 @@ internal sealed partial class ArticleExtractor
             }
 
             // textContent.trim(): the whitespace inside counts
+            budget -= node.End - node.Start;
+            if (budget < 0) return false;
             int length = RawTextLength(document, i);
             if (length < minContentLength) continue;
 
@@ -411,7 +420,8 @@ internal sealed partial class ArticleExtractor
             }
             if (key is (int)HtmlTag.Html or (int)HtmlTag.Head) continue;
 
-            if (lookForByline && ((_attributes[i] & AuthorMark) != 0 || (_class[i] != null || _id[i] != null) && Byline().IsMatch(MatchString(i))))
+            if (lookForByline && node.End - node.Start <= ShortElementChars
+                && ((_attributes[i] & AuthorMark) != 0 || (_class[i] != null || _id[i] != null) && Byline().IsMatch(MatchString(i))))
             {
                 // Readability measures textContent with its whitespace, only trimmed: a block laid out over
                 // many indented lines is no byline
@@ -437,7 +447,7 @@ internal sealed partial class ArticleExtractor
                 }
             }
 
-            if (lookForTitle && key is (int)HtmlTag.H1 or (int)HtmlTag.H2)
+            if (lookForTitle && key is (int)HtmlTag.H1 or (int)HtmlTag.H2 && node.End - node.Start <= ShortElementChars)
             {
                 var heading = _data[i].Text();
                 if (!string.IsNullOrEmpty(heading) && TextSimilarity(title!, heading) > 0.75)
@@ -1056,7 +1066,8 @@ internal sealed partial class ArticleExtractor
         if (s.Commas >= 10) return false;
         if (s.Video) return false;
 
-        if (s.Text < 40 && _data[i].Text() is { } text && (AdWords().IsMatch(text) || LoadingWords().IsMatch(text))) return true;
+        if (s.Text < 40 && _data.Node(i).End - _data.Node(i).Start <= ShortElementChars
+            && _data[i].Text() is { } text && (AdWords().IsMatch(text) || LoadingWords().IsMatch(text))) return true;
 
         int p = s.P, img = s.Img, li = s.Li - 100, input = s.Input, embed = s.Embed;
         double linkDensity = LinkDensity(in s);
