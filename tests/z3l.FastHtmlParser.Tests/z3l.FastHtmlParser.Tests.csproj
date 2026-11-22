@@ -1,8 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Both builds of the library that go into the package are tested. -->
-    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+    <!-- Every build of the library that goes into the package is tested. -->
+    <TargetFrameworks>net9.0;net10.0;net11.0</TargetFrameworks>
+    <!-- One framework at a time: the tests of one run already take every core (MSTestSettings.cs), and with three
+         runs at once a test with a time limit ran out of it on the 4-core CI runner. -->
+    <TestTfmsInParallel>false</TestTfmsInParallel>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>

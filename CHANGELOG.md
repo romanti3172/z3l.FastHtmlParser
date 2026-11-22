@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- .NET 11: both packages have a `net11.0` build, next to `net9.0` and `net10.0`.
+
 ### Changed
 
 - `Text()` is the visible text in one line, as jsoup's `text()`: `<br>`, block elements (`p`, `div`, `li`, `tr`,
