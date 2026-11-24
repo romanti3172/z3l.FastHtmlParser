@@ -436,7 +436,7 @@ with AngleSharp and HtmlAgilityPack; see [benchmarks/README.md](benchmarks/READM
 
 ## Other languages
 
-The same parser is available for:
+The same parser is available in 10 languages (11 packages: Python has two):
 
 | Language | Package | Source |
 |---|---|---|
@@ -444,7 +444,17 @@ The same parser is available for:
 | Go | `github.com/romanti3172/fasthtmlparser` | [romanti3172/fasthtmlparser](https://github.com/romanti3172/fasthtmlparser) |
 | Rust | [fasthtmlparser](https://crates.io/crates/fasthtmlparser) on crates.io | [romanti3172/fasthtmlparser-rs](https://github.com/romanti3172/fasthtmlparser-rs) |
 | JavaScript / TypeScript | [z3l-fasthtmlparser](https://www.npmjs.com/package/z3l-fasthtmlparser) on npm | [romanti3172/fasthtmlparser-js](https://github.com/romanti3172/fasthtmlparser-js) |
-| Python | [fasthtmlparser](https://pypi.org/project/fasthtmlparser/) on PyPI | [romanti3172/fasthtmlparser-py](https://github.com/romanti3172/fasthtmlparser-py) |
+| Python (over the Rust port) | [fasthtmlparser](https://pypi.org/project/fasthtmlparser/) on PyPI | [romanti3172/fasthtmlparser-py](https://github.com/romanti3172/fasthtmlparser-py) |
+| Python (pure, for PyPy and places without binary wheels) | [fasthtmlparser-pure](https://pypi.org/project/fasthtmlparser-pure/) on PyPI | [romanti3172/fasthtmlparser-pure](https://github.com/romanti3172/fasthtmlparser-pure) |
+| Java | [io.github.romanti3172:fasthtmlparser](https://central.sonatype.com/artifact/io.github.romanti3172/fasthtmlparser) on Maven Central | [romanti3172/fasthtmlparser-java](https://github.com/romanti3172/fasthtmlparser-java) |
+| PHP | [z3l/fasthtmlparser](https://packagist.org/packages/z3l/fasthtmlparser) on Packagist | [romanti3172/fasthtmlparser-php](https://github.com/romanti3172/fasthtmlparser-php) |
+| Ruby | [fasthtmlparser](https://rubygems.org/gems/fasthtmlparser) on RubyGems | [romanti3172/fasthtmlparser-rb](https://github.com/romanti3172/fasthtmlparser-rb) |
+| C++ (C++20) | CMake `FetchContent` | [romanti3172/fasthtmlparser-cpp](https://github.com/romanti3172/fasthtmlparser-cpp) |
+| C (C99, one header) | CMake `FetchContent` | [romanti3172/fasthtmlparser-c](https://github.com/romanti3172/fasthtmlparser-c) |
+
+The ports have the parser, XPath 1.0 and CSS selectors with the same API in the naming of each language;
+`Markdown()`, `Article()`, `Sanitize()` and forms are in the .NET package only for now.
+Install commands and first steps for each: https://fasthtmlparser.com/docs#languages
 
 ## License
 
