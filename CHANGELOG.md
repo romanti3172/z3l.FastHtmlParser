@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.2 (2026-11-24)
+
+### Changed
+
+- README (the package page on NuGet): "Other languages" lists all 10 languages and 11 packages, and says which
+  features (HTML to Markdown, `Article()`, `Sanitize()`, forms) are in .NET only. No changes to the code.
+
 ## 1.8.1 (2026-11-22)
 
 ### Fixed
